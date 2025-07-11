@@ -71,30 +71,33 @@ timer_calibrate (void) {
 }
 
 /* Returns the number of timer ticks since the OS booted. */
-int64_t
-timer_ticks (void) {
-	enum intr_level old_level = intr_disable ();
+int64_t timer_ticks(void)
+{
+	enum intr_level old_level = intr_disable();
 	int64_t t = ticks;
-	intr_set_level (old_level);
-	barrier ();
+	intr_set_level(old_level);
+	barrier();
 	return t;
 }
 
-/* Returns the number of timer ticks elapsed since THEN, which
-   should be a value once returned by timer_ticks(). */
-int64_t
-timer_elapsed (int64_t then) {
-	return timer_ticks () - then;
+/* THEN 이후로 경과한 타이머 틱(tick)의 수를 반환합니다.
+   THEN은 이전에 timer_ticks()가 반환했던 값이어야 합니다. */
+
+int64_t timer_elapsed(int64_t then)
+{
+	return timer_ticks() - then;
 }
 
-/* Suspends execution for approximately TICKS timer ticks. */
-void
-timer_sleep (int64_t ticks) {
-	int64_t start = timer_ticks ();
+/* 약 TICKS만큼의 타이머 틱 동안 실행을 일시 중지합니다. */
 
-	ASSERT (intr_get_level () == INTR_ON);
-	while (timer_elapsed (start) < ticks)
-		thread_yield ();
+void timer_sleep(int64_t ticks) 
+{
+	int64_t start = timer_ticks();
+
+	ASSERT (intr_get_level() == INTR_ON);
+
+	while (timer_elapsed(start) < ticks)
+		thread_yield();
 }
 
 /* Suspends execution for approximately MS milliseconds. */
