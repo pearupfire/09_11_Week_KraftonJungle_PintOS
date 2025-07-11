@@ -452,33 +452,31 @@ do_iret (struct intr_frame *tf) {
 			: : "g" ((uint64_t) tf) : "memory");
 }
 
-/* Switching the thread by activating the new thread's page
-   tables, and, if the previous thread is dying, destroying it.
+/* 새 스레드의 페이지 테이블을 활성화하고,
+   이전 스레드가 종료 중(dying) 상태일 경우, 해당 스레드를 제거(destroy)하면서 스레드를 전환합니다.
 
-   At this function's invocation, we just switched from thread
-   PREV, the new thread is already running, and interrupts are
-   still disabled.
+   이 함수가 호출되는 시점에는, 방금 스레드 PREV로부터 전환되었고,
+   새 스레드가 이미 실행 중이며, 인터럽트는 여전히 비활성화된 상태입니다.
 
-   It's not safe to call printf() until the thread switch is
-   complete.  In practice that means that printf()s should be
-   added at the end of the function. */
+   스레드 전환이 완료되기 전까지는 printf()를 호출하는 것이 안전하지 않습니다.
+   실제로는 printf() 호출은 함수 맨 끝에 추가해야 한다는 뜻입니다. */
 static void
 thread_launch (struct thread *th) {
 	uint64_t tf_cur = (uint64_t) &running_thread ()->tf;
 	uint64_t tf = (uint64_t) &th->tf;
 	ASSERT (intr_get_level () == INTR_OFF);
 
-	/* The main switching logic.
-	 * We first restore the whole execution context into the intr_frame
-	 * and then switching to the next thread by calling do_iret.
-	 * Note that, we SHOULD NOT use any stack from here
-	 * until switching is done. */
+	/* 주요 스레드 전환 로직입니다.
+	* 먼저 전체 실행 컨텍스트(execution context)를 intr_frame에 복원한 후,
+	* do_iret을 호출하여 다음 스레드로 전환합니다.
+	* 주의할 점은, 전환이 완료되기 전까지는
+	* 이 지점에서 스택을 절대로 사용해서는 안 된다는 것입니다. */
 	__asm __volatile (
-			/* Store registers that will be used. */
+			/* 이후에 사용할 레지스터들을 미리 저장함 */
 			"push %%rax\n"
 			"push %%rbx\n"
 			"push %%rcx\n"
-			/* Fetch input once */
+			/* 입력을 한 번만 읽어옴 */
 			"movq %0, %%rax\n"
 			"movq %1, %%rcx\n"
 			"movq %%r15, 0(%%rax)\n"
