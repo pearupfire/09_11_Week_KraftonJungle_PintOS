@@ -40,6 +40,11 @@ static struct lock tid_lock;
 /* Thread destruction requests */
 static struct list destruction_req;
 
+// 잠든 스레드 관리 리스트
+static struct list sleep_list;
+// 슬립 리스트에 다음에 검사해야 할 최소 틱 시간 저장 변수
+static int64_t next_tick_to_awake;
+
 /* Statistics. */
 static long long idle_ticks;    /* # of timer ticks spent idle. */
 static long long kernel_ticks;  /* # of timer ticks in kernel threads. */
@@ -109,6 +114,8 @@ thread_init (void) {
 	lock_init (&tid_lock);
 	list_init (&ready_list);
 	list_init (&destruction_req);
+	list_init (&sleep_list); //++
+	next_tick_to_awake = INT64_MAX; //+
 
 	/* Set up a thread structure for the running thread. */
 	initial_thread = running_thread ();
@@ -296,15 +303,22 @@ thread_exit (void) {
    may be scheduled again immediately at the scheduler's whim. */
 void thread_yield(void) 
 {
+	//thread_current(): 현재 스레드를 반환
 	struct thread *curr = thread_current();
 	enum intr_level old_level;
 
 	ASSERT (!intr_context());
 
+	// intr_disable(): 인터텁트를 비활성화하고 이전 인터럽트 상태를 반환
 	old_level = intr_disable();
+
+	// list_push_back(): 매개변수로 전달된 상태로 인터럽트 상태를 설정하고 이전 인터럽트 상태를 반환
 	if (curr != idle_thread)
-		list_push_back (&ready_list, &curr->elem);
-	do_schedule(THREAD_READY);
+		list_push_back (&ready_list, &curr->elem); // 주어진 항목을 리스트의 마지막에 삽입
+	
+	// do_schedule(THREAD_READY);
+	curr->status = THREAD_READY;
+	schedule();
 	intr_set_level(old_level);
 }
 
@@ -587,4 +601,51 @@ allocate_tid (void) {
 	lock_release (&tid_lock);
 
 	return tid;
+}
+
+void thread_sleep(int64_t ticks)
+{
+	enum intr_level old_level = intr_disable(); // 인터럽트 비활성화
+	struct thread *cur_thread = thread_current(); // 현재 실행 중인 스레드
+
+	if (cur_thread == idle_thread) // 현재 스레드가 idle이면
+		return; // 리턴
+
+	cur_thread->wakeup_tick = ticks; // 현재 스레드가 깨어나야할 시간 저장
+	list_push_back(&sleep_list, &cur_thread->elem); // 현재 스레드를 슬립 리스트에 추가
+
+	if (ticks < next_tick_to_awake) // 가장 빠른 wakeup tick을 나타내는 전역 변수 갱신
+		next_tick_to_awake = ticks;
+	
+	thread_block(); // 현재 스레드를 블락하고 CPU에서 제외
+	intr_set_level(old_level); // 이전 인터럽트 상태로 복원
+}
+
+void thread_awake(int64_t current_ticks)
+{
+	struct list_elem *e = list_begin(&sleep_list); // list 순회하기 위한 반복자
+	next_tick_to_awake = INT64_MAX; 
+
+	// sleep_list의 끝까지 반복
+	while (e != list_end(&sleep_list))
+	{
+		// 리스트 요소를 스레드 구조체로 변환
+		struct thread *t = list_entry(e, struct thread, elem);
+
+		// 깨어나야 할 시간이 현재 시각 이하이면
+		if (t->wakeup_tick <= current_ticks)
+		{
+			e = list_remove(e); // 리스트에서 제거
+			thread_unblock(t); // 해달 스레드 ready 상태로 전환
+		}
+		else
+		{
+			// 아직 꺠어날 시간이 안 됐으면, 최소 wakeup_tick을 갱신
+			if (t->wakeup_tick < next_tick_to_awake)	
+				next_tick_to_awake = t->wakeup_tick;
+			
+			// 다음 리스트로 이동
+			e = list_next(e);
+		}
+	}
 }

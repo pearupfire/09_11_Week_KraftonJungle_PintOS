@@ -92,13 +92,17 @@ int64_t timer_elapsed(int64_t then)
 
 void timer_sleep(int64_t ticks) 
 {
-	int64_t start = timer_ticks();
+	int64_t start = timer_ticks(); // timer_ticks(): 현재 틱의 값을 반환
 
 	ASSERT (intr_get_level() == INTR_ON);
 
-	while (timer_elapsed(start) < ticks)
-		thread_yield();
+	// timer_elapsed(): 시작 이후 몇 개의 틱이 지나갔는지 반환
+	while (timer_elapsed(start) < ticks) 
+		//thread_yield(); //thread_yield(): CPU 생성하고 ready_list에 스레드를 삽입
+		thread_sleep(start < ticks);
 }
+
+	
 
 /* Suspends execution for approximately MS milliseconds. */
 void
@@ -125,10 +129,13 @@ timer_print_stats (void) {
 }
 
 /* Timer interrupt handler. */
-static void
-timer_interrupt (struct intr_frame *args UNUSED) {
+static void timer_interrupt (struct intr_frame *args UNUSED)
+{
 	ticks++;
 	thread_tick ();
+
+
+	thread_awake(ticks);
 }
 
 /* Returns true if LOOPS iterations waits for more than one timer
