@@ -79,19 +79,19 @@ static tid_t allocate_tid (void);
 // setup temporal gdt first.
 static uint64_t gdt[3] = { 0, 0x00af9a000000ffff, 0x00cf92000000ffff };
 
-/* Initializes the threading system by transforming the code
-   that's currently running into a thread.  This can't work in
-   general and it is possible in this case only because loader.S
-   was careful to put the bottom of the stack at a page boundary.
+/** 
+ * 현재 실행 중인 코드를 스레드로 변환하여 스레딩 시스템을 초기화합니다.  
+ * 일반적으로는 이런 방식이 불가능하지만, 이번 경우엔  
+ * `loader.S`가 스택의 바닥을 페이지 경계에 맞춰 배치했기 때문에 가능합니다.
+ *
+ * 또한 실행 큐(run queue)와 TID 락(tid lock)을 초기화합니다.
+ *
+ * 이 함수를 호출한 후에는 `thread_create()`로 스레드를 생성하기 전에  
+ * 반드시 페이지 할당자(page allocator)를 초기화해야 합니다.
+ *
+ * 이 함수가 끝나기 전까지는 `thread_current()`를 호출하는 것은 안전하지 않습니다.
+ */
 
-   Also initializes the run queue and the tid lock.
-
-   After calling this function, be sure to initialize the page
-   allocator before trying to create any threads with
-   thread_create().
-
-   It is not safe to call thread_current() until this function
-   finishes. */
 void
 thread_init (void) {
 	ASSERT (intr_get_level () == INTR_OFF);
