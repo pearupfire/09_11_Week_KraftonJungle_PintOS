@@ -17,6 +17,7 @@
 #error TIMER_FREQ <= 1000 recommended
 #endif
 
+static struct list sleep_list; 
 /* Number of timer ticks since OS booted. */
 static int64_t ticks;
 
@@ -36,6 +37,8 @@ void
 timer_init (void) {
 	/* 8254 input frequency divided by TIMER_FREQ, rounded to
 	   nearest. */
+	
+	list_init(&sleep_list); //sleep_list 초기화
 	uint16_t count = (1193180 + TIMER_FREQ / 2) / TIMER_FREQ;
 
 	outb (0x43, 0x34);    /* CW: counter 0, LSB then MSB, mode 2, binary. */
@@ -70,18 +73,17 @@ timer_calibrate (void) {
 	printf ("%'"PRIu64" loops/s.\n", (uint64_t) loops_per_tick * TIMER_FREQ);
 }
 
-/* Returns the number of timer ticks since the OS booted. */
+/* OS가 부팅된 이후로 경과한 timer tick의 수를 반환한다. */
 int64_t timer_ticks(void)
 {
-	enum intr_level old_level = intr_disable();
+	enum intr_level old_level = intr_disable(); 
 	int64_t t = ticks;
 	intr_set_level(old_level);
 	barrier();
 	return t;
 }
 
-/* THEN 이후로 경과한 타이머 틱(tick)의 수를 반환합니다.
-   THEN은 이전에 timer_ticks()가 반환했던 값이어야 합니다. */
+/* 지정된 tick이후로 얼마나 많은 tick이 흘렀는지 반환 */
 
 int64_t timer_elapsed(int64_t then)
 {
@@ -94,7 +96,7 @@ void timer_sleep(int64_t ticks)
 {
 	int64_t start = timer_ticks(); // timer_ticks(): 현재 틱의 값을 반환
 
-	ASSERT (intr_get_level() == INTR_ON);
+	ASSERT(intr_get_level() == INTR_ON);
 
 	// timer_elapsed(): 시작 이후 몇 개의 틱이 지나갔는지 반환
 	// 지정한 틱 수가 지나기 전까지 반복
@@ -102,8 +104,6 @@ void timer_sleep(int64_t ticks)
 		//thread_yield(); //thread_yield(): CPU 생성하고 ready_list에 스레드를 삽입
 		thread_sleep(start + ticks); // busy waiting 대신 스레드를 블록 상태로 전환하여 CPU 낭비 방지
 }
-
-	
 
 /* Suspends execution for approximately MS milliseconds. */
 void

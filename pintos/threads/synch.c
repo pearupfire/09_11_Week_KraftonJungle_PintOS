@@ -77,6 +77,7 @@ void sema_down (struct semaphore *sema)
 
 		list_insert_ordered(&sema->waiters, &thread_current()->elem, cmp_priority, NULL);  // +
 		// 현재 스레드를 block 상태로 전환
+    
 		thread_block ();
 	}
 
@@ -136,6 +137,7 @@ void sema_up (struct semaphore *sema)
 	intr_set_level (old_level); // 인터럽트 활성화
 	thread_yield(); 
 }
+
 
 static void sema_test_helper (void *sema_);
 
