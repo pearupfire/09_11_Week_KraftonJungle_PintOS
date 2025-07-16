@@ -222,12 +222,12 @@ void lock_acquire (struct lock *lock)
 		list_insert_ordered(&lock->holder->donations, &cur_thread->donation_elem, thread_cmp_donate_priority, NULL); 
 		// 현재 락의 holder에게 우선순위 기부 
 		// lock->holder->priority = cur_thread->priority;
-		donate_priority();
+		nested_donation();
 	}
 
 	// lock의 내부 세마포어를 down하여, lock을 획득할 수 있을 때까지 대기
 	sema_down(&lock->semaphore);
-	// 락 획등 성공 -> 기다리는 락 없음
+	// 락 획득 성공 -> 기다리는 락 없음
 	cur_thread->waiting_lock = NULL;
 	// 세마포어 획득 후, 현재 스레드를 lock의 holder로 설정
 	lock->holder = thread_current();
@@ -235,7 +235,7 @@ void lock_acquire (struct lock *lock)
 
 /// @brief 현재 스레드가 기다리고 있는 락을 따라가며 우선순위를 기부
 /// @param  
-void donate_priority(void)
+void nested_donation(void)
 {
 	int depth;
 	struct thread *cur_thread = thread_current(); 
@@ -297,19 +297,18 @@ void lock_release (struct lock *lock)
 	for (e = list_begin(&cur->donations); e != list_end(&cur->donations); e = list_next(e))
 	{	
 		struct thread *t = list_entry(e, struct thread, donation_elem);
-		struct list_elem *next = list_next(e);
 
-		if (t->waiting_lock == lock)
-			list_remove(&t->donation_elem);
+		if (t->waiting_lock == lock) // 락이 있다면
+			list_remove(&t->donation_elem); // 기부 회수
 	}
 
-	refresh_priority();
+	multiple_donation(); // 기부 정리
 
 	lock->holder = NULL; // lock의 소유자를 NULL로 설정
 	sema_up (&lock->semaphore); // lock 내부 세마포어를 up하여 다음 대기 중인 스레드에게 lock을 넘김
 }
 
-void refresh_priority(void)
+void multiple_donation(void)
 {
 	struct thread *cur = thread_current();
 

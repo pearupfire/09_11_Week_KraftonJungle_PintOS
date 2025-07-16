@@ -352,7 +352,7 @@ void thread_yield(void)
 void thread_set_priority (int new_priority) 
 {
 	thread_current()->original_priority = new_priority;
-	refresh_priority();
+	multiple_donation();
 	
 	if (!list_empty(&ready_list)) // 리스트가 안비었다면
 	{
