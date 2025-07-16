@@ -37,6 +37,9 @@ void cond_init (struct condition *);
 void cond_wait (struct condition *, struct lock *);
 void cond_signal (struct condition *, struct lock *);
 void cond_broadcast (struct condition *, struct lock *);
+bool cond_sema_priority(const struct list_elem *a, const struct list_elem *b, void *aux);
+bool thread_cmp_donate_priority (const struct list_elem *a, const struct list_elem *b, void *aux);
+void refresh_priority(void);
 
 /* Optimization barrier.
  *

@@ -88,8 +88,8 @@ int64_t timer_elapsed(int64_t then)
 	return timer_ticks() - then;
 }
 
-/* 약 TICKS만큼의 타이머 틱 동안 실행을 일시 중지합니다. */
-
+/// @brief 현재 스레드를 지정한 틱 수만큼 잠들게 함 (busy wait 대신 블록 처리)
+/// @param ticks 대기할 틱 수
 void timer_sleep(int64_t ticks) 
 {
 	int64_t start = timer_ticks(); // timer_ticks(): 현재 틱의 값을 반환
@@ -97,9 +97,10 @@ void timer_sleep(int64_t ticks)
 	ASSERT (intr_get_level() == INTR_ON);
 
 	// timer_elapsed(): 시작 이후 몇 개의 틱이 지나갔는지 반환
+	// 지정한 틱 수가 지나기 전까지 반복
 	while (timer_elapsed(start) < ticks) 
 		//thread_yield(); //thread_yield(): CPU 생성하고 ready_list에 스레드를 삽입
-		thread_sleep(start < ticks);
+		thread_sleep(start + ticks); // busy waiting 대신 스레드를 블록 상태로 전환하여 CPU 낭비 방지
 }
 
 	
@@ -133,7 +134,6 @@ static void timer_interrupt (struct intr_frame *args UNUSED)
 {
 	ticks++;
 	thread_tick ();
-
 
 	thread_awake(ticks);
 }
