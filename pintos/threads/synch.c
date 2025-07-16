@@ -193,6 +193,33 @@ lock_init (struct lock *lock) {
 	sema_init (&lock->semaphore, 1);
 }
 
+void donate_priority(void)
+{
+	int depth;
+	struct thread *cur_thread = thread_current(); 
+
+	for (depth = 0; depth < 8; depth++) // 8단계 까지 중첩 기부 허용
+	{
+		if (!cur_thread->waiting_lock) // 기다리고 있는 락이 없다면
+			break; // 중단
+		
+		// 현재 스레드가 기다리고 있는 락의 holder (우선순위 기부 대상)
+		struct thread *holder = cur_thread->waiting_lock->holder; 	
+		
+		// 기부 대상의 우선순위가 현재 스레드보다 낮다면 기부 
+		if (holder->priority < cur_thread->priority)
+			holder->priority = cur_thread->priority; 
+		
+		// holder가 다른 락을 기다릴 수 있음
+		cur_thread = holder;
+	}
+}
+
+bool thread_cmp_donate_priority (const struct list_elem *a, const struct list_elem *b, void *aux)
+{
+	return list_entry(a, struct thread, donation_elem)->priority > list_entry(b, struct thread, donation_elem)->priority;
+}
+
 /* Acquires LOCK, sleeping until it becomes available if
    necessary.  The lock must not already be held by the current
    thread.
@@ -201,22 +228,37 @@ lock_init (struct lock *lock) {
    interrupt handler.  This function may be called with
    interrupts disabled, but interrupts will be turned back on if
    we need to sleep. */
-void
-lock_acquire (struct lock *lock) {
+void lock_acquire (struct lock *lock) 
+{
 	ASSERT (lock != NULL);
 	ASSERT (!intr_context ());
 	ASSERT (!lock_held_by_current_thread (lock));
 
-	sema_down (&lock->semaphore);
-	lock->holder = thread_current ();
+	struct thread *cur_thread = thread_current();
+
+	if (lock->holder) // 락을 즉시 획득할 수 없다면 (이미 다른 스레드가 보유 중이라면)
+	{
+		// 현재 스레드가 기다리고 있는 락 저장 
+		cur_thread->waiting_lock = lock; 
+		// 락의 소유자에게 우선순위 기부: donations 리스트에 현재 스레드를 삽입
+		list_insert_ordered(&lock->holder->donations, &cur_thread->donation_elem, thread_cmp_donate_priority, NULL); 
+		// 현재 락의 holder에게 우선순위 기부 
+		// lock->holder->priority = cur_thread->priority;
+		donate_priority();
+	}
+
+	// lock의 내부 세마포어를 down하여, lock을 획득할 수 있을 때까지 대기
+	sema_down(&lock->semaphore);
+	// 락 획득 성공 -> 기다리는 락 없음
+	cur_thread->waiting_lock = NULL;
+	// 세마포어 획득 후, 현재 스레드를 lock의 holder로 설정
+	lock->holder = thread_current();
 }
 
-/* Tries to acquires LOCK and returns true if successful or false
-   on failure.  The lock must not already be held by the current
-   thread.
+/* LOCK을 획득하려고 시도하며, 성공하면 true를, 실패하면 false를 반환합니다.  
+   현재 스레드가 이미 해당 LOCK을 보유하고 있어서는 안 됩니다.
 
-   This function will not sleep, so it may be called within an
-   interrupt handler. */
+   이 함수는 **슬립(sleep)** 하지 않으므로, **인터럽트 핸들러 안에서도 호출할 수 있습니다. */
 bool
 lock_try_acquire (struct lock *lock) {
 	bool success;
@@ -230,19 +272,57 @@ lock_try_acquire (struct lock *lock) {
 	return success;
 }
 
+void multiple_donation(void)
+{
+	struct thread *cur = thread_current();
+
+	// donations 리스트가 비었다면
+	if (list_empty(&cur->donations))
+	{
+		// 우선순위 값을 original 우선순위로 복귀
+		cur->priority = cur->original_priority;
+	}
+	// 비어있지 않다면
+	else if (!list_empty(&cur->donations))
+	{
+		// 정렬 후 맨 앞의 값이 가장 크므로 list_sort -> front->priority 값으로 갱신
+		// donations의 우선순위가 가장 높은 값으로 갱신
+		list_sort(&cur->donations, thread_cmp_donate_priority, NULL);
+		struct thread *front = list_entry(list_front(&cur->donations), struct thread, donation_elem);
+		cur->priority = front->priority;
+	}
+}
+
 /* Releases LOCK, which must be owned by the current thread.
    This is lock_release function.
 
    An interrupt handler cannot acquire a lock, so it does not
    make sense to try to release a lock within an interrupt
    handler. */
-void
-lock_release (struct lock *lock) {
+/// @brief 현재 락을 해제하고, 도네이션 우선순위를 정리한 뒤 대기 중인 스래드가 있다면 락을 넘김
+/// @param lock 해제할 락
+void lock_release (struct lock *lock) 
+{
 	ASSERT (lock != NULL);
 	ASSERT (lock_held_by_current_thread (lock));
 
-	lock->holder = NULL;
-	sema_up (&lock->semaphore);
+	struct list_elem *e;
+	struct thread *cur = thread_current();
+
+	// donations 리스트 순회
+	for (e = list_begin(&cur->donations); e != list_end(&cur->donations); e = list_next(e))
+	{	
+		struct thread *t = list_entry(e, struct thread, donation_elem);
+		struct list_elem *next = list_next(e);
+
+		if (t->waiting_lock == lock) // 락이 있다면
+			list_remove(&t->donation_elem); // 기부 회수
+	}
+
+	multiple_donation(); // 기부 정리
+
+	lock->holder = NULL; // lock의 소유자를 NULL로 설정
+	sema_up (&lock->semaphore); // lock 내부 세마포어를 up하여 다음 대기 중인 스레드에게 lock을 넘김
 }
 
 /* Returns true if the current thread holds LOCK, false
