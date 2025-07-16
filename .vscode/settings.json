@@ -1,0 +1,10 @@
+{
+    "files.associations": {
+        "thread.h": "c",
+        "intr-stubs.h": "c",
+        "debug.h": "c",
+        "ostream": "c",
+        "typeinfo": "c",
+        "random": "c"
+    }
+}

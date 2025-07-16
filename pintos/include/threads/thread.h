@@ -94,13 +94,14 @@ struct thread {
 	char name[16];                      /* Name (for debugging purposes). */
 	int priority;                       /* Priority. */
 
-	int original_priority;
-	struct list donations;
-	struct lock *wait_on_lock;
+	int original_priority; 		  // 기부 받기 전 우선 순위
+	struct lock *waiting_lock;    // 대기 중인 락
+	struct list donations;        // 기부 받은 리스트들
+	struct list_elem donation_elem; // 기부자로 들어갈때 쓰는 연결점
 
 	/* Shared between thread.c and synch.c. */
 	struct list_elem elem;              /* List element. */
-
+	int64_t wakeup_tick; 				// tick이 되면 깨어나야 함
 #ifdef USERPROG
 	/* Owned by userprog/process.c. */
 	uint64_t *pml4;                     /* Page map level 4 */
@@ -148,7 +149,7 @@ int thread_get_nice (void);
 void thread_set_nice (int);
 int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
-
+bool cmp_priority(const struct list_elem *a, const struct list_elem *b, void *aux);
 void do_iret (struct intr_frame *tf);
 
 #endif /* threads/thread.h */
