@@ -2,8 +2,9 @@
 #include <debug.h>
 #include <inttypes.h>
 #include <round.h>
-#include <stdio.h>
+#include <lib/stdio.h>
 #include <stdlib.h>
+#include <lib/string.h>
 #include <string.h>
 #include "userprog/gdt.h"
 #include "userprog/tss.h"
@@ -49,6 +50,10 @@ process_create_initd (const char *file_name) {
 	if (fn_copy == NULL)
 		return TID_ERROR;
 	strlcpy (fn_copy, file_name, PGSIZE);
+
+	// 임시
+	char *ptr;
+	strtok_r(file_name, " ", &ptr);
 
 	/* Create a new thread to execute FILE_NAME. */
 	tid = thread_create (file_name, PRI_DEFAULT, initd, fn_copy);
@@ -160,8 +165,8 @@ error:
 
 /* Switch the current execution context to the f_name.
  * Returns -1 on fail. */
-int
-process_exec (void *f_name) {
+int process_exec(void *f_name) 
+{
 	char *file_name = f_name;
 	bool success;
 
@@ -174,35 +179,93 @@ process_exec (void *f_name) {
 	_if.eflags = FLAG_IF | FLAG_MBS;
 
 	/* We first kill the current context */
+	// 현재 사용자 프로세스 정리
 	process_cleanup ();
 
-	/* And then load the binary */
-	success = load (file_name, &_if);
+	/* 파싱해서 넘기기 */
+	char *token, *save_ptr; // 토큰 분리에 사용할 포인터
+	char *arg_list[32]; 	// 파싱한 문자를 저장할 배열
+	int arg_cnt = 0;		// 인자 개수
 
-	/* If load failed, quit. */
+
+	// strtok_r를 이름을 공백으로 분할
+	for (token = strtok_r(file_name," ", &save_ptr); token != NULL; token = strtok_r(NULL, " ", &save_ptr))
+		arg_list[arg_cnt++] = token;	// 분리한 토큰을 arg_list에 저장
+	
+	/* And then load the binary */
+	// ELF 실행 파일 로드
+	success = load (arg_list[0], &_if);
+	// file_name 프리
 	palloc_free_page (file_name);
+	
+	/* If load failed, quit. */
+	// 로드 실패 시 종료
 	if (!success)
 		return -1;
+	
+	argument_stack(arg_list, arg_cnt, &_if);
+	hex_dump (_if.rsp, _if.rsp, USER_STACK - _if.rsp, true);
 
 	/* Start switched process. */
+	// 성공 시 프로세스 시작
 	do_iret (&_if);
 	NOT_REACHED ();
 }
 
+void argument_stack(char **argv, int argc, struct intr_frame *if_)
+{
+	char *arg_addr[32]; // 인자 문자열이 위치한 주소를 저장할 배열
+	int argv_len;
 
-/*
-주어진 TID(스레드 ID)를 가진 스레드가 종료될 때까지 기다리고,
-그 스레드의 종료 상태(exit status)를 반환합니다.
-만약 그 스레드가 커널에 의해 종료되었다면(예: 예외로 인해 강제 종료됨), -1을 반환합니다.
-주어진 TID가 유효하지 않거나, 호출한 프로세스의 자식 프로세스가 아니거나,
-이미 process_wait()를 해당 TID에 대해 성공적으로 호출한 적이 있다면, 기다리지 않고 즉시 -1을 반환합니다.
-*/
+	// 문자열을 유저 스택에 복사
+	for (int i = argc - 1; i >= 0; i--)
+	{
+		argv_len = strlen(argv[i]) + 1; // 널 문자 포함 길이 계산
+		if_->rsp -= argv_len;			// 스택 포인터 감소
+		memcpy(if_->rsp, argv[i], argv_len); // 해당 인자 스택에 복사
+		arg_addr[i] = if_->rsp; 		// 문자열 주소 저장 
+	}
+
+	// 8바이트 정렬을 위해 패딩 처리
+	while (if_->rsp % 8) 
+		*(uint8_t *)(--if_->rsp) = 0; // 한 바이트 씩 0 으로
+	
+	// argc[argc] = NULL
+	if_->rsp -= 8;
+	memset(if_->rsp, 0, sizeof(char *));
+
+	// argv[i] 포인터들을 스택에 push
+	for (int i = argc - 1; i >= 0; i--)
+	{
+		if_->rsp -= 8;
+		memcpy(if_->rsp, &arg_addr[i], sizeof(char *)); // 문자열 주소를 push
+	}
+
+	// 레지스터 설정
+	if_->R.rdi = argc; // 첫 번째 인자 argc -> %rdi
+	if_->R.rsi = if_->rsp + 8; // 두 번째 인자 argv -> %rsi
+
+	// fake return address
+	if_->rsp -= 8;
+	memset((void *)if_->rsp, 0, 8); 
+}
+
+/* Waits for thread TID to die and returns its exit status.  If
+ * it was terminated by the kernel (i.e. killed due to an
+ * exception), returns -1.  If TID is invalid or if it was not a
+ * child of the calling process, or if process_wait() has already
+ * been successfully called for the given TID, returns -1
+ * immediately, without waiting.
+ *
+ * This function will be implemented in problem 2-2.  For now, it
+ * does nothing. */
 int
 process_wait (tid_t child_tid UNUSED) {
 	/* XXX: Hint) The pintos exit if process_wait (initd), we recommend you
 	 * XXX:       to add infinite loop here before
 	 * XXX:       implementing the process_wait. */
 	while (true);
+
 	return -1;
 }
 
@@ -319,8 +382,8 @@ static bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
  * Stores the executable's entry point into *RIP
  * and its initial stack pointer into *RSP.
  * Returns true if successful, false otherwise. */
-static bool
-load (const char *file_name, struct intr_frame *if_) {
+static bool load (const char *file_name, struct intr_frame *if_) 
+{
 	struct thread *t = thread_current ();
 	struct ELF ehdr;
 	struct file *file = NULL;
@@ -340,6 +403,9 @@ load (const char *file_name, struct intr_frame *if_) {
 		printf ("load: %s: open failed\n", file_name);
 		goto done;
 	}
+
+	t->runn_file = file; // +
+	file_deny_write(file); // +
 
 	/* Read and verify executable header. */
 	if (file_read (file, &ehdr, sizeof ehdr) != sizeof ehdr

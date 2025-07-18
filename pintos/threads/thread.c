@@ -187,11 +187,12 @@ tid_t thread_create (const char *name, int priority, thread_func *function, void
 {
 	struct thread *t;
 	tid_t tid;
+	struct kernel_thread_frame *kf;
 
 	ASSERT (function != NULL); //function 포인터가 NULL아닌지 확인
 
 	/* 쓰레드 할당 */
-	t = palloc_get_page (PAL_ZERO); //
+	t = palloc_get_page (PAL_ZERO);
 	if (t == NULL)
 		return TID_ERROR;
 
