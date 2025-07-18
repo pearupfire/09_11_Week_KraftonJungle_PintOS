@@ -190,20 +190,19 @@ process_exec (void *f_name) {
 }
 
 
-/* Waits for thread TID to die and returns its exit status.  If
- * it was terminated by the kernel (i.e. killed due to an
- * exception), returns -1.  If TID is invalid or if it was not a
- * child of the calling process, or if process_wait() has already
- * been successfully called for the given TID, returns -1
- * immediately, without waiting.
- *
- * This function will be implemented in problem 2-2.  For now, it
- * does nothing. */
+/*
+주어진 TID(스레드 ID)를 가진 스레드가 종료될 때까지 기다리고,
+그 스레드의 종료 상태(exit status)를 반환합니다.
+만약 그 스레드가 커널에 의해 종료되었다면(예: 예외로 인해 강제 종료됨), -1을 반환합니다.
+주어진 TID가 유효하지 않거나, 호출한 프로세스의 자식 프로세스가 아니거나,
+이미 process_wait()를 해당 TID에 대해 성공적으로 호출한 적이 있다면, 기다리지 않고 즉시 -1을 반환합니다.
+*/
 int
 process_wait (tid_t child_tid UNUSED) {
 	/* XXX: Hint) The pintos exit if process_wait (initd), we recommend you
 	 * XXX:       to add infinite loop here before
 	 * XXX:       implementing the process_wait. */
+	while (true);
 	return -1;
 }
 
