@@ -215,6 +215,12 @@ outputs:
 'to'
 'tokenize.'
 */
+
+/// @brief 문자열을 지젇된 구분자 기준으로 분리, 토큰을 하나씩 반환하는 재진입 가능한 토크나이저 함수
+/// @param s 분리할 문자열. 첫 호출 시에는 분리할 문자열의 포인터, 이후 호출 시 NULL
+/// @param delimiters 토큰을 구반할 문자
+/// @param save_ptr 현재 위치를 저장하고 이후 호출에 사용하기 위한 포인터 변수
+/// @return 다음 토큰에 대한 포인터, 더 이상 토큰이 없다면 NULL 반환
 char *
 strtok_r (char *s, const char *delimiters, char **save_ptr) {
 	char *token;
@@ -298,6 +304,12 @@ strnlen (const char *string, size_t maxlen) {
    increasingly popular extension.  See
 http://www.courtesan.com/todd/papers/strlcpy.html for
 information on strlcpy(). */
+
+/// @brief 문자열을 복사
+/// @param dst 복사할 대상
+/// @param src 복사할 원본 문자열
+/// @param size 버퍼 크기
+/// @return 복사하려던 원본 문자열의 전체 길이
 size_t
 strlcpy (char *dst, const char *src, size_t size) {
 	size_t src_len;

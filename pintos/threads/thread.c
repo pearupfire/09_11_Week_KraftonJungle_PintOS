@@ -98,8 +98,8 @@ static uint64_t gdt[3] = { 0, 0x00af9a000000ffff, 0x00cf92000000ffff };
    It is not safe to call thread_current() until this function
    finishes. */
 
-void
-thread_maybe_yield (void) {
+void thread_maybe_yield (void) 
+{
 	enum intr_level old_level = intr_disable ();
 
 	if (!list_empty (&ready_list) && thread_current ()->priority < list_entry (list_front (&ready_list), struct thread, elem)->priority) {
@@ -202,11 +202,12 @@ tid_t thread_create (const char *name, int priority, thread_func *function, void
 {
 	struct thread *t;
 	tid_t tid;
+	struct kernel_thread_frame *kf;
 
 	ASSERT (function != NULL); //function 포인터가 NULL아닌지 확인
 
 	/* 쓰레드 할당 */
-	t = palloc_get_page (PAL_ZERO); //
+	t = palloc_get_page (PAL_ZERO);
 	if (t == NULL)
 		return TID_ERROR;
 
