@@ -97,6 +97,21 @@ static uint64_t gdt[3] = { 0, 0x00af9a000000ffff, 0x00cf92000000ffff };
 
    It is not safe to call thread_current() until this function
    finishes. */
+
+void thread_maybe_yield (void) 
+{
+	enum intr_level old_level = intr_disable ();
+
+	if (!list_empty (&ready_list) && thread_current ()->priority < list_entry (list_front (&ready_list), struct thread, elem)->priority) {
+		if (intr_context())
+			intr_yield_on_return();
+        else
+			thread_yield();
+	}
+
+	intr_set_level (old_level);
+}
+
 void thread_init(void)
 {
 	ASSERT (intr_get_level () == INTR_OFF);
@@ -214,7 +229,7 @@ tid_t thread_create (const char *name, int priority, thread_func *function, void
 	thread_unblock (t);
 
 	if (t->priority > thread_current()->priority)
-		thread_yield();
+		thread_maybe_yield();
 
 	return tid;
 }
@@ -361,7 +376,7 @@ void thread_set_priority (int new_priority)
 
 		// 맨 앞의 리스트의 우선순위가 높다면 cpu 양보
 		if (front_thread->priority > thread_current()->priority)
-			thread_yield();
+			thread_maybe_yield();
 	}
 }
 

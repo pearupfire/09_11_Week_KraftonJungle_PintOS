@@ -134,8 +134,8 @@ void sema_up (struct semaphore *sema)
 	}
 
 	sema->value++; // 세마포어 값을 증가시켜 자원 해제
+	thread_maybe_yield(); 
 	intr_set_level (old_level); // 인터럽트 활성화
-	thread_yield(); 
 }
 
 
