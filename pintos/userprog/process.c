@@ -403,9 +403,6 @@ static bool load (const char *file_name, struct intr_frame *if_)
 		goto done;
 	}
 
-	t->runn_file = file; // +
-	file_deny_write(file); // +
-
 	/* Read and verify executable header. */
 	if (file_read (file, &ehdr, sizeof ehdr) != sizeof ehdr
 			|| memcmp (ehdr.e_ident, "\177ELF\2\1\1", 7)

@@ -1,4 +1,5 @@
 #include "userprog/syscall.h"
+#include "lib/user/syscall.h"
 #include <stdio.h>
 #include <syscall-nr.h>
 #include "threads/interrupt.h"
@@ -43,4 +44,29 @@ syscall_handler (struct intr_frame *f UNUSED) {
 	// TODO: Your implementation goes here.
 	printf ("system call!\n");
 	thread_exit ();
+}
+
+void halt(void)
+{
+
+}
+
+void exit(int status)
+{
+
+}
+
+pid_t fork(const char *thread_name)
+{
+
+}
+
+int exec(const char *file)
+{
+
+}
+
+int wait(pid_t)
+{
+
 }
