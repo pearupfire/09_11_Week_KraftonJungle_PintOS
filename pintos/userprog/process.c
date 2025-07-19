@@ -196,15 +196,14 @@ int process_exec(void *f_name)
 	// ELF 실행 파일 로드
 	success = load (arg_list[0], &_if);
 	// file_name 프리
+	argument_stack(arg_list, arg_cnt, &_if);
+	hex_dump (_if.rsp, _if.rsp, USER_STACK - _if.rsp, true);
 	palloc_free_page (file_name);
 	
 	/* If load failed, quit. */
 	// 로드 실패 시 종료
 	if (!success)
 		return -1;
-	
-	argument_stack(arg_list, arg_cnt, &_if);
-	hex_dump (_if.rsp, _if.rsp, USER_STACK - _if.rsp, true);
 
 	/* Start switched process. */
 	// 성공 시 프로세스 시작
