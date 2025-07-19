@@ -216,37 +216,37 @@ void argument_stack(char **argv, int argc, struct intr_frame *if_)
 	char *arg_addr[32]; // 인자 문자열이 위치한 주소를 저장할 배열
 	int argv_len;
 
-	// 문자열을 유저 스택에 복사
+	// 문자열을 유저 스택에 복사 (역순으로)
 	for (int i = argc - 1; i >= 0; i--)
 	{
 		argv_len = strlen(argv[i]) + 1; // 널 문자 포함 길이 계산
-		if_->rsp -= argv_len;			// 스택 포인터 감소
+		if_->rsp -= argv_len;			// 스택 포인터 감소 (문자열 길이만큼 감소)
 		memcpy(if_->rsp, argv[i], argv_len); // 해당 인자 스택에 복사
-		arg_addr[i] = if_->rsp; 		// 문자열 주소 저장 
+		arg_addr[i] = if_->rsp; 		// 복사한 문자열의 시작 주소 저장 
 	}
 
 	// 8바이트 정렬을 위해 패딩 처리
-	while (if_->rsp % 8) 
-		*(uint8_t *)(--if_->rsp) = 0; // 한 바이트 씩 0 으로
+	while (if_->rsp % 8) // 8의 배수가 될때까지
+		*(uint8_t *)(--if_->rsp) = 0; // 1 바이트 씩 0 패딩 후 스택 포인터 감소
 	
-	// argc[argc] = NULL
+	// argc 배열의 끝을 나타내는 NULL 포인터 추가 argc[argc] = NULL
 	if_->rsp -= 8;
 	memset(if_->rsp, 0, sizeof(char *));
 
-	// argv[i] 포인터들을 스택에 push
+	// argv[i] 배열의 각 요소 (인자 문자열의 주소)를 스택에 저장
 	for (int i = argc - 1; i >= 0; i--)
 	{
 		if_->rsp -= 8;
-		memcpy(if_->rsp, &arg_addr[i], sizeof(char *)); // 문자열 주소를 push
+		memcpy(if_->rsp, &arg_addr[i], sizeof(char *)); // 해당 인자 문자열 주소를 스택에 복사
 	}
+	
+	// fake return address
+	if_->rsp -= 8;
+	memset((void *)if_->rsp, 0, 8);
 
 	// 레지스터 설정
 	if_->R.rdi = argc; // 첫 번째 인자 argc -> %rdi
 	if_->R.rsi = if_->rsp + 8; // 두 번째 인자 argv -> %rsi
-
-	// fake return address
-	if_->rsp -= 8;
-	memset((void *)if_->rsp, 0, 8); 
 }
 
 /* Waits for thread TID to die and returns its exit status.  If
