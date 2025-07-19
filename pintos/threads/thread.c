@@ -228,8 +228,13 @@ tid_t thread_create (const char *name, int priority, thread_func *function, void
 	
 	thread_unblock (t);
 
+	enum intr_level old_level;
+	old_level = intr_disable();
+
 	if (t->priority > thread_current()->priority)
 		thread_maybe_yield();
+
+	intr_set_level(old_level);
 
 	return tid;
 }
@@ -368,6 +373,9 @@ void thread_set_priority (int new_priority)
 {
 	thread_current()->original_priority = new_priority;
 	multiple_donation();
+
+	enum intr_level old_level;
+	old_level = intr_disable();
 	
 	if (!list_empty(&ready_list)) // 리스트가 안비었다면
 	{
@@ -378,6 +386,8 @@ void thread_set_priority (int new_priority)
 		if (front_thread->priority > thread_current()->priority)
 			thread_maybe_yield();
 	}
+
+	intr_set_level(old_level);
 }
 
 /* Returns the current thread's priority. */
@@ -484,6 +494,9 @@ static void init_thread (struct thread *t, const char *name, int priority)
 	list_init(&t->donations); 		 // 리스트 초기화
 
 	t->magic = THREAD_MAGIC; // 스레드가 올바르게 초기화 되었는지 검증하기 위한 값 (스택 오버플로우 탐지용)
+#ifdef USERPROG
+	t->pml4 = NULL; // 명시적으로 NULL로 초기화
+#endif
 }
 
 /* Chooses and returns the next thread to be scheduled.  Should
