@@ -39,16 +39,63 @@ syscall_init (void) {
 }
 
 /* The main system call interface */
-void
-syscall_handler (struct intr_frame *f UNUSED) {
-	// TODO: Your implementation goes here.
-	printf ("system call!\n");
-	thread_exit ();
+void syscall_handler (struct intr_frame *f UNUSED) 
+{
+	int sys_num = f->R.rax;
+
+	switch (sys_num)
+	{
+	case SYS_HALT:
+		halt();
+		break;
+	case SYS_EXIT:
+		exit(f->R.rdi);
+		break;
+	case SYS_FORK:
+		f->R.rax = fork(f->R.rdi);
+		break;
+	case SYS_EXEC:
+		f->R.rax = exec(f->R.rdi);
+		break;
+	case SYS_WAIT:
+		f->R.rax = wait(f->R.rdi);
+		break;
+	case SYS_CREATE:
+		f->R.rax = create(f->R.rdi, f->R.rsi);
+		break;
+	case SYS_REMOVE:
+		f->R.rax = remove(f->R.rdi);
+		break;
+	case SYS_OPEN:
+		f->R.rax = open(f->R.rdi);
+		break;
+	case SYS_FILESIZE:
+		f->R.rax = filesize(f->R.rdi);
+		break;
+	case SYS_READ:
+		f->R.rax = read(f->R.rdi, f->R.rsi, f->R.rdx);
+		break;
+	case SYS_WRITE:
+		f->R.rax = write(f->R.rdi, f->R.rsi, f->R.rdx);
+		break;
+	case SYS_SEEK:
+		seek(f->R.rdi, f->R.rsi);
+		break;
+	case SYS_TELL:
+		f->R.rax = tell(f->R.rdi);
+		break;
+	case SYS_CLOSE:
+		close(f->R.rdi);
+		break;
+	default:
+		exit(-1);
+		break;
+	}
 }
 
 void halt(void)
 {
-
+	power_off();
 }
 
 void exit(int status)
@@ -67,6 +114,51 @@ int exec(const char *file)
 }
 
 int wait(pid_t)
+{
+
+}
+
+bool create (const char *file, unsigned initial_size)
+{
+
+}
+
+bool remove (const char *file)
+{
+
+}
+
+int open (const char *file)
+{
+
+}
+
+int filesize (int fd)
+{
+
+}
+
+int read (int fd, void *buffer, unsigned length)
+{
+
+}
+
+int write (int fd, const void *buffer, unsigned length)
+{
+
+}
+
+void seek (int fd, unsigned position)
+{
+
+}
+
+unsigned tell (int fd)
+{
+
+}
+
+void close (int fd)
 {
 
 }
