@@ -8,6 +8,9 @@
         "random": "c",
         "flags.h": "c",
         "interrupt.h": "c",
-        "directory.h": "c"
+        "directory.h": "c",
+        "loader.h": "c",
+        "filesys.h": "c",
+        "console.h": "c"
     }
 }

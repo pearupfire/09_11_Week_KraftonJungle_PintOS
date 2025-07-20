@@ -8,7 +8,9 @@
 #include "userprog/gdt.h"
 #include "threads/flags.h"
 #include "intrinsic.h"
-#include "filesys.h"
+#include "filesys/filesys.h"
+#include "kernel/console.h"
+#include "filesys/file.h"
 
 void syscall_entry (void);
 void syscall_handler (struct intr_frame *);
@@ -174,5 +176,5 @@ unsigned tell (int fd)
 
 void close (int fd)
 {
-
+	
 }
