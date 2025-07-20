@@ -8,6 +8,7 @@
 #include "userprog/gdt.h"
 #include "threads/flags.h"
 #include "intrinsic.h"
+#include "filesys.h"
 
 void syscall_entry (void);
 void syscall_handler (struct intr_frame *);
@@ -100,7 +101,10 @@ void halt(void)
 
 void exit(int status)
 {
-
+	struct thread *cur = thread_current(); // 현재 스레드 저장
+	cur->exit_status = status; // 종료 상태 저장
+	printf("%s: exit(%d)\n", cur->name, cur->exit_status); // 디버깅
+	thread_exit(); // 현재 스레드 종료
 }
 
 pid_t fork(const char *thread_name)
@@ -120,12 +124,22 @@ int wait(pid_t)
 
 bool create (const char *file, unsigned initial_size)
 {
+	// 파일이 널인지 확인
+	if (file == NULL)
+		exit(-1);
 
+	// 주어진 이름과 초기 크기로 새로운 파일 생성하는 함수
+	return filesys_create(file, initial_size);
 }
 
 bool remove (const char *file)
 {
+	// 파일이 널인지 확인
+	if (file == NULL)
+		exit(-1);
 
+	// 주어진 이름의 파일 삭제하는 함수
+	return filesys_remove(file);
 }
 
 int open (const char *file)
@@ -140,7 +154,7 @@ int filesize (int fd)
 
 int read (int fd, void *buffer, unsigned length)
 {
-
+	
 }
 
 int write (int fd, const void *buffer, unsigned length)

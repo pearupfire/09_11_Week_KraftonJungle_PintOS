@@ -129,8 +129,8 @@ void thread_init(void)
 	lock_init (&tid_lock);
 	list_init (&ready_list);
 	list_init (&destruction_req);
-	list_init (&sleep_list); //++
-	next_tick_to_awake = INT64_MAX; //+
+	list_init (&sleep_list);
+	next_tick_to_awake = INT64_MAX;
 
 	/* Set up a thread structure for the running thread. */
 	initial_thread = running_thread ();
@@ -496,6 +496,7 @@ static void init_thread (struct thread *t, const char *name, int priority)
 	t->magic = THREAD_MAGIC; // 스레드가 올바르게 초기화 되었는지 검증하기 위한 값 (스택 오버플로우 탐지용)
 #ifdef USERPROG
 	t->pml4 = NULL; // 명시적으로 NULL로 초기화
+	t->exit_status = 0; // 초기화 기본 종료 상태 0
 #endif
 }
 

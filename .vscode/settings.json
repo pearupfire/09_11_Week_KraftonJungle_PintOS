@@ -5,6 +5,9 @@
         "debug.h": "c",
         "ostream": "c",
         "typeinfo": "c",
-        "random": "c"
+        "random": "c",
+        "flags.h": "c",
+        "interrupt.h": "c",
+        "directory.h": "c"
     }
 }
