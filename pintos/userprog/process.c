@@ -168,16 +168,38 @@ process_exec (void *f_name) {
 	/* We cannot use the intr_frame in the thread structure.
 	 * This is because when current thread rescheduled,
 	 * it stores the execution information to the member. */
+
+	
+	if (file_name == NULL) {
+		return -1;
+	}
+
+	int argc = 0;
+	char *argv[64];
+	char *save_ptr;
+	char *token = strtok_r(file_name, " ", &save_ptr);
+	while (token != NULL) {
+		argv[argc++] = token;
+		token = strtok_r(NULL, " ", &save_ptr);
+	}
+	
 	struct intr_frame _if;
 	_if.ds = _if.es = _if.ss = SEL_UDSEG;
 	_if.cs = SEL_UCSEG;
 	_if.eflags = FLAG_IF | FLAG_MBS;
+
+	//유저스택 할당. setup_stack() 복사한 문자열 스택에 저장, 포인터 조정
+	//*rsp 감소 후 memcpy() arg[i] 문자열 스택에 복사
+
+	argument_stack(argv, argc, &_if.rsp);
+	
 
 	/* We first kill the current context */
 	process_cleanup ();
 
 	/* And then load the binary */
 	success = load (file_name, &_if);
+
 
 	/* If load failed, quit. */
 	palloc_free_page (file_name);
@@ -190,13 +212,6 @@ process_exec (void *f_name) {
 }
 
 
-/*
-주어진 TID(스레드 ID)를 가진 스레드가 종료될 때까지 기다리고,
-그 스레드의 종료 상태(exit status)를 반환합니다.
-만약 그 스레드가 커널에 의해 종료되었다면(예: 예외로 인해 강제 종료됨), -1을 반환합니다.
-주어진 TID가 유효하지 않거나, 호출한 프로세스의 자식 프로세스가 아니거나,
-이미 process_wait()를 해당 TID에 대해 성공적으로 호출한 적이 있다면, 기다리지 않고 즉시 -1을 반환합니다.
-*/
 int
 process_wait (tid_t child_tid UNUSED) {
 	/* XXX: Hint) The pintos exit if process_wait (initd), we recommend you

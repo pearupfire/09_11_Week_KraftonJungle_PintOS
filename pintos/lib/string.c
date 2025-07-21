@@ -254,6 +254,7 @@ strtok_r (char *s, const char *delimiters, char **save_ptr) {
 }
 
 /* Sets the SIZE bytes in DST to VALUE. */
+//원하는 값으로 채움
 void *
 memset (void *dst_, int value, size_t size) {
 	unsigned char *dst = dst_;
