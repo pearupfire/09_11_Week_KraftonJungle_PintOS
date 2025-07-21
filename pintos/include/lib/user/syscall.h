@@ -35,6 +35,7 @@ int write (int fd, const void *buffer, unsigned length);
 void seek (int fd, unsigned position);
 unsigned tell (int fd);
 void close (int fd);
+void check_address(void *address);
 
 int dup2(int oldfd, int newfd);
 

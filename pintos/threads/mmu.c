@@ -210,7 +210,7 @@ pml4_activate (uint64_t *pml4) {
  * address UADDR in pml4.  Returns the kernel virtual address
  * corresponding to that physical address, or a null pointer if
  * UADDR is unmapped. */
-/// @brief 
+/// @brief 사용자 가상 주소가 매핑되어 있는지 확인
 /// @param pml4 최상위 페이지 테이블(pml4) 포인터
 /// @param uaddr 사용자 가상 주소 (조회 대상)
 /// @return uaddr에 매핑된 물리 주소에 대응하는 커널 가상 주소, 매핑 되지 않았다면 NULL

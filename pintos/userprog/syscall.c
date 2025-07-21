@@ -96,6 +96,12 @@ void syscall_handler (struct intr_frame *f UNUSED)
 	}
 }
 
+struct file* get_file(int fd)
+{
+	struct thread *cur_thread = thread_current();
+
+}
+
 void halt(void)
 {
 	power_off();
@@ -124,11 +130,16 @@ int wait(pid_t)
 
 }
 
+void check_address(void *address)
+{	
+	// 커널영역이거나, address가 null이거나, 가상페이지에 할당되었는지
+	if (is_kernel_vaddr(address) || address == NULL || pml4_get_page(thread_current()->pml4, address))
+		exit(-1);
+}
+
 bool create (const char *file, unsigned initial_size)
 {
-	// 파일이 널인지 확인
-	if (file == NULL)
-		exit(-1);
+	check_address(file);
 
 	// 주어진 이름과 초기 크기로 새로운 파일 생성하는 함수
 	return filesys_create(file, initial_size);
@@ -136,9 +147,7 @@ bool create (const char *file, unsigned initial_size)
 
 bool remove (const char *file)
 {
-	// 파일이 널인지 확인
-	if (file == NULL)
-		exit(-1);
+	check_address(file);
 
 	// 주어진 이름의 파일 삭제하는 함수
 	return filesys_remove(file);
@@ -161,7 +170,21 @@ int read (int fd, void *buffer, unsigned length)
 
 int write (int fd, const void *buffer, unsigned length)
 {
+	check_address(buffer);
 
+	if (fd <= 0) // stdin에 쓰려고 할 경우, fd 음수일 경우
+	{
+		return -1;
+	}
+	else if (fd == 1)
+	{
+		putbuf(buffer, length);
+		return length;
+	}
+	else
+	{
+		// file_write();
+	}
 }
 
 void seek (int fd, unsigned position)

@@ -11,6 +11,7 @@
         "directory.h": "c",
         "loader.h": "c",
         "filesys.h": "c",
-        "console.h": "c"
+        "console.h": "c",
+        "file.h": "c"
     }
 }
