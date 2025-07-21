@@ -190,8 +190,6 @@ process_exec (void *f_name) {
 
 	//유저스택 할당. setup_stack() 복사한 문자열 스택에 저장, 포인터 조정
 	//*rsp 감소 후 memcpy() arg[i] 문자열 스택에 복사
-
-	argument_stack(argv, argc, &_if.rsp);
 	
 
 	/* We first kill the current context */
@@ -199,6 +197,10 @@ process_exec (void *f_name) {
 
 	/* And then load the binary */
 	success = load (file_name, &_if);
+
+	if(success) {
+		argument_stack(argv, argc, &_if.rsp);
+	}
 
 
 	/* If load failed, quit. */
@@ -209,6 +211,45 @@ process_exec (void *f_name) {
 	/* Start switched process. */
 	do_iret (&_if);
 	NOT_REACHED ();
+}
+	void argument_stack(char **argv, int argc, void **rsp) {
+    // 문자열 주소 저장용
+    char *arg_ptrs[argc];
+
+    // 1. 인자 문자열들을 스택에 복사 (뒤에서부터)
+    for (int i = argc - 1; i >= 0; i--) {
+        int len = strlen(argv[i]) + 1;     // NULL 포함
+        *rsp -= len;                        // 스택 아래로 이동
+        memcpy(*rsp, argv[i], len);         // 스택에 문자열 복사
+        arg_ptrs[i] = *rsp;                 // 주소 기억
+    }
+
+    // 2. 8바이트 정렬 맞추기
+    while ((uintptr_t)(*rsp) % 8 != 0)
+        (*rsp)--;
+
+    // 3. 스택 공간 할당
+    *rsp -= 8;
+    memset(*rsp, 0, 8);
+
+    // 4. argv[i] 주소들 push
+    for (int i = argc - 1; i >= 0; i--) {
+        *rsp -= 8;
+        memcpy(*rsp, &arg_ptrs[i], 8);
+    }
+
+    // 5. argv (char **argv) push
+    char **argv_start = (char **)*rsp;  // 현재 rsp가 argv[0] 배열 시작점
+    *rsp -= 8;
+    memcpy(*rsp, &argv_start, 8);
+
+    // 6. argc push
+    *rsp -= 8;
+    memcpy(*rsp, &argc, 8);
+
+    // 7. fake return address
+    *rsp -= 8;
+    memset(*rsp, 0, 8);
 }
 
 
