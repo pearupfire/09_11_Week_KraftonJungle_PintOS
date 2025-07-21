@@ -151,7 +151,10 @@ bool remove (const char *file)
 
 int open (const char *file)
 {
-
+	if (file == NULL)
+		return -1;
+	
+	file_open(file);
 }
 
 int filesize (int fd)
@@ -190,12 +193,22 @@ int write (int fd, const void *buffer, unsigned length)
 
 void seek (int fd, unsigned position)
 {
+	struct file *file = process_get_file(fd);
 
+	if (file == NULL || fd < 3)
+		return;
+	
+	file_seek(file, position);
 }
 
 unsigned tell (int fd)
 {
+	struct file *file = process_get_file(fd);
 
+	if (file == NULL || fd < 3)
+		return;
+
+	return file_tell(file);
 }
 
 void close (int fd)
