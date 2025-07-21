@@ -94,12 +94,7 @@ void syscall_handler (struct intr_frame *f UNUSED)
 		exit(-1);
 		break;
 	}
-}
-
-struct file* get_file(int fd)
-{
-	struct thread *cur_thread = thread_current();
-
+	
 }
 
 void halt(void)

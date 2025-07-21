@@ -215,6 +215,17 @@ tid_t thread_create (const char *name, int priority, thread_func *function, void
 	init_thread (t, name, priority);
 	tid = t->tid = allocate_tid ();
 
+#ifdef USERPROG
+	t->fd_index = 3; 
+	t->exit_status = 0;
+	
+	// 테이블 순회하면서 초기화
+	for (int i = 3; i < FDCOUNT_LIMIT; i++)
+	{
+		t->fd_table[i] = NULL;
+	}
+#endif
+
 	/* 스레드가 스케줄되면 kernel_thread를 호출한다. 
 	 	rdi는 첫 번째 인자이고, rsi는 두 번째 인자이다. */
 	t->tf.rip = (uintptr_t) kernel_thread;
