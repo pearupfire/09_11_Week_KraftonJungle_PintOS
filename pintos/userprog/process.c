@@ -321,7 +321,7 @@ process_activate (struct thread *next) {
 /// @brief 현재 스레드의 파일 디스크립터 테이블에 파일을 추가하는 함수
 /// @param file 넣을 파일
 /// @return 성공 시 table 인덱스 반환, 실패 시 -1 반환
-int add_file(struct file *file)
+int process_add_file(struct file *file)
 {
 	if (file == NULL)
 		return -1;
@@ -340,7 +340,7 @@ int add_file(struct file *file)
 }
 
 /// @brief 현재 스레드의 fd번째 파일 정보 얻는 함수
-struct file* get_file(int fd)
+struct file* process_get_file(int fd)
 {
 	struct thread *cur_thread = thread_current();
 
@@ -354,7 +354,7 @@ struct file* get_file(int fd)
 /// @brief 현재 스레드의 fd번째 파일 삭제하는 함수
 /// @param fd 파일 디스크립터 인덱스
 /// @return 성공 시 0, 실패 시 -1 반환
-int close_file(int fd)
+int process_close_file(int fd)
 {
 	struct thread *cur_thread = thread_current();
 
