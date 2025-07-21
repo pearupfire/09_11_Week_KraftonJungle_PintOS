@@ -123,9 +123,9 @@ int exec(const char *file)
 
 }
 
-int wait(pid_t)
+int wait(pid_t child_tid)
 {
-
+	return process_wait(child_tid);
 }
 
 void check_address(void *address)
