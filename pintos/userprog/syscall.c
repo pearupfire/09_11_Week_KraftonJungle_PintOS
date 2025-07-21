@@ -12,6 +12,7 @@
 #include "kernel/console.h"
 #include "filesys/file.h"
 #include "include/userprog/process.h"
+#include "threads/synch.h"
 
 void syscall_entry (void);
 void syscall_handler (struct intr_frame *);
@@ -40,6 +41,8 @@ syscall_init (void) {
 	 * mode stack. Therefore, we masked the FLAG_FL. */
 	write_msr(MSR_SYSCALL_MASK,
 			FLAG_IF | FLAG_TF | FLAG_DF | FLAG_IOPL | FLAG_AC | FLAG_NT);
+		
+	lock_init(&filesys_lock);
 }
 
 /* The main system call interface */
@@ -151,10 +154,22 @@ bool remove (const char *file)
 
 int open (const char *file)
 {
-	if (file == NULL)
+	check_address(file);
+
+	struct file *open_file = filesys_open(file);
+
+	if (open_file == NULL)
 		return -1;
+
+	int fd = process_add_file(open_file);
+
+	if (fd == -1)
+	{
+		file_close(open_file);
+		return -1;
+	}
 	
-	file_open(file);
+	return fd;
 }
 
 int filesize (int fd)
@@ -169,26 +184,43 @@ int filesize (int fd)
 
 int read (int fd, void *buffer, unsigned length)
 {
-	
+	int read_bytes = 0;
+
+	if (fd == 0) // 파일 디스크립터가 0이면
+	{
+		char c;
+		unsigned char *buf = buffer;
+
+		for (int i = 0; i < length; i++) // 길이만큼 반복하고
+		{
+			c = input_getc(); // input_getc() = 키보드 하나하나 입력이 가능
+			*buf++ = c; // c를 buf에 저장하고 포인터 늘리기
+			read_bytes++; // read_bytes 증가
+		}
+		
+		return read_bytes; 
+	}
+	else if (fd == 1 || fd == 2) // 파일 디스크립터 1, 2 -> 표준 출력, 표준 에러는 읽을 수 없으므로
+	{
+		return -1; 
+	}
+	else // 3 이상 이라면
+	{
+		struct file *file = process_get_file(fd); 
+
+		if (file == NULL)
+			return -1;
+
+		lock_acquire(&filesys_lock); // race condition 방지를 위해 잠금
+		read_bytes = file_read(file, buffer, length);
+		lock_release(&filesys_lock); // 해제
+		return read_bytes;
+	}
 }
 
 int write (int fd, const void *buffer, unsigned length)
 {
-	check_address(buffer);
 
-	if (fd <= 0) // stdin에 쓰려고 할 경우, fd 음수일 경우
-	{
-		return -1;
-	}
-	else if (fd == 1)
-	{
-		putbuf(buffer, length);
-		return length;
-	}
-	else
-	{
-		// file_write();
-	}
 }
 
 void seek (int fd, unsigned position)
