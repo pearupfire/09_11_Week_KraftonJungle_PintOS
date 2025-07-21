@@ -1,6 +1,6 @@
 #ifndef THREADS_THREAD_H
 #define THREADS_THREAD_H
-
+#define USERPROG
 #include <debug.h>
 #include <list.h>
 #include <stdint.h>
@@ -26,6 +26,7 @@ typedef int tid_t;
 #define PRI_MIN 0                       /* Lowest priority. */
 #define PRI_DEFAULT 31                  /* Default priority. */
 #define PRI_MAX 63                      /* Highest priority. */
+#define FDCOUNT_LIMIT 1 << 9 // 페이지 크기 4kb / 파일 포인터 8바이트 = 512
 
 /* A kernel thread or user process.
  *
@@ -107,6 +108,9 @@ struct thread {
 #ifdef USERPROG
 	/* Owned by userprog/process.c. */
 	uint64_t *pml4;                     /* Page map level 4 */
+	int exit_status;
+	int fd_index; 							// 파일 디스크립터 인덱스
+	struct file *fd_table[FDCOUNT_LIMIT];	// 파일 디스크립터 테이블
 #endif
 #ifdef VM
 	/* Table for whole virtual memory owned by thread. */
