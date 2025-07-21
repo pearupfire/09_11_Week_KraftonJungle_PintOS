@@ -129,8 +129,8 @@ void thread_init(void)
 	lock_init (&tid_lock);
 	list_init (&ready_list);
 	list_init (&destruction_req);
-	list_init (&sleep_list); //++
-	next_tick_to_awake = INT64_MAX; //+
+	list_init (&sleep_list);
+	next_tick_to_awake = INT64_MAX;
 
 	/* Set up a thread structure for the running thread. */
 	initial_thread = running_thread ();
@@ -214,6 +214,17 @@ tid_t thread_create (const char *name, int priority, thread_func *function, void
 	/* Initialize thread. */
 	init_thread (t, name, priority);
 	tid = t->tid = allocate_tid ();
+
+#ifdef USERPROG
+	t->fd_index = 3; 
+	t->exit_status = 0;
+	
+	// 테이블 순회하면서 초기화
+	for (int i = 3; i < FDCOUNT_LIMIT; i++)
+	{
+		t->fd_table[i] = NULL;
+	}
+#endif
 
 	/* 스레드가 스케줄되면 kernel_thread를 호출한다. 
 	 	rdi는 첫 번째 인자이고, rsi는 두 번째 인자이다. */
@@ -496,6 +507,7 @@ static void init_thread (struct thread *t, const char *name, int priority)
 	t->magic = THREAD_MAGIC; // 스레드가 올바르게 초기화 되었는지 검증하기 위한 값 (스택 오버플로우 탐지용)
 #ifdef USERPROG
 	t->pml4 = NULL; // 명시적으로 NULL로 초기화
+	t->exit_status = 0; // 초기화 기본 종료 상태 0
 #endif
 }
 
