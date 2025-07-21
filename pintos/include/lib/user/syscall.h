@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include <debug.h>
 #include <stddef.h>
+#include "threads/synch.h"
 
 /* Process identifier. */
 typedef int pid_t;
@@ -20,7 +21,6 @@ typedef int off_t;
 #define EXIT_SUCCESS 0          /* Successful execution. */
 #define EXIT_FAILURE 1          /* Unsuccessful execution. */
 
-struct lock filesys_lock; // 파일 읽기 쓰기 lock
 
 /* Projects 2 and later. */
 void halt (void) NO_RETURN;

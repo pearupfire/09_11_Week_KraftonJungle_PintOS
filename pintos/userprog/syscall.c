@@ -12,10 +12,10 @@
 #include "kernel/console.h"
 #include "filesys/file.h"
 #include "include/userprog/process.h"
-#include "threads/synch.h"
 
 void syscall_entry (void);
 void syscall_handler (struct intr_frame *);
+struct lock filesys_lock; // 파일 읽기 쓰기 lock
 
 /* System call.
  *
