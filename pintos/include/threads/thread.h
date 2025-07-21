@@ -109,8 +109,14 @@ struct thread {
 	/* Owned by userprog/process.c. */
 	uint64_t *pml4;                     /* Page map level 4 */
 	int exit_status;
+
+	/* 자식 프로세스 관리 */
+	struct child_status *child_status;
+	struct list child_list;
+
 	int fd_index; 							// 파일 디스크립터 인덱스
 	struct file *fd_table[FDCOUNT_LIMIT];	// 파일 디스크립터 테이블
+ 
 #endif
 #ifdef VM
 	/* Table for whole virtual memory owned by thread. */
@@ -120,6 +126,16 @@ struct thread {
 	/* Owned by thread.c. */
 	struct intr_frame tf;               /* Information for switching */
 	unsigned magic;                     /* Detects stack overflow. */
+};
+
+/* 자식 프로세스 구조체 */
+struct child_status {
+	tid_t child_tid; // 자식 TID
+	int exit_status; // 자식 종료 코드
+	bool has_been_waited; // 부모가 wait()을 했는지 확인하는
+	bool is_exited; // 자식이 종료됐는지 여부 (이 원소가)
+	struct sempahore *wait_sema; // 부모가 자식을 기다릴 때 사용하는 세마포어
+	struct list_elem elem; // 부모의 child_list에 연결될 리스트 노드
 };
 
 /* If false (default), use round-robin scheduler.
