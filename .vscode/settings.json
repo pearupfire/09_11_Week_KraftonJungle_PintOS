@@ -12,6 +12,7 @@
         "loader.h": "c",
         "filesys.h": "c",
         "console.h": "c",
-        "file.h": "c"
+        "file.h": "c",
+        "process.h": "c"
     }
 }

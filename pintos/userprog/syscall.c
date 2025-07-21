@@ -9,7 +9,6 @@
 #include "threads/flags.h"
 #include "intrinsic.h"
 #include "filesys/filesys.h"
-#include "kernel/console.h"
 #include "filesys/file.h"
 #include "include/userprog/process.h"
 
@@ -220,7 +219,29 @@ int read (int fd, void *buffer, unsigned length)
 
 int write (int fd, const void *buffer, unsigned length)
 {
+	if (fd <= 0)
+	{
+		return -1;
+	}
+	else if (fd == 1 || fd == 2)
+	{
+		putbuf(buffer, length);
+		return length;
+	}
+	else
+	{
+		struct file *file = process_get_file(fd);
+		int write_bytes = -1;
 
+		if (file == NULL)
+			return -1;
+		
+		lock_acquire(&filesys_lock); // race condition 방지 락
+		write_bytes = file_write(file, buffer, length);
+		lock_release(&filesys_lock); // 락 해제
+
+		return write_bytes;
+	}
 }
 
 void seek (int fd, unsigned position)
