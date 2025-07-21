@@ -60,6 +60,17 @@ process_create_initd (const char *file_name) {
 	if (tid == TID_ERROR)
 		palloc_free_page (fn_copy);
 
+	// child status 생성 및 추가
+	struct child_status *cs = palloc_get_page(PAL_ZERO);
+	cs->child_tid = tid;
+	cs->has_been_waited = false;
+	cs->is_exited = false;
+	sema_init(&cs->wait_sema, 0);
+
+	struct thread *t_current = thread_current();
+	list_push_back(&t_current->child_list, &cs->elem);
+	t_current->child_status = cs;
+
 	return tid;
 }
 
@@ -261,12 +272,32 @@ void argument_stack(char **argv, int argc, struct intr_frame *if_)
  * does nothing. */
 int
 process_wait (tid_t child_tid UNUSED) {
-	/* XXX: Hint) The pintos exit if process_wait (initd), we recommend you
-	 * XXX:       to add infinite loop here before
-	 * XXX:       implementing the process_wait. */
-	while (true);
+	struct thread *cur = thread_current();
+	struct list_elem *e;
+	struct child_status *cs = NULL;
 
-	return -1;
+	for (e = list_begin(&cur->child_list); e != list_end(&cur->child_list); e = list_next(e)) {
+		struct child_status *entry = list_entry(e, struct child_status, elem);
+		if (entry->child_tid == child_tid) {
+			cs = entry;
+			break;
+		}
+	}
+
+	if (cs == NULL || cs->has_been_waited) {
+		return -1;
+	}
+
+	cs->has_been_waited = true;
+
+	if (!cs->is_exited) {
+		sema_down(&cs->wait_sema);
+	}
+
+	int status = cs->exit_status;
+	list_remove(&cs->elem);
+	palloc_free_page(cs);
+	return status;
 }
 
 /* Exit the process. This function is called by thread_exit (). */
@@ -277,6 +308,12 @@ process_exit (void) {
 	 * TODO: Implement process termination message (see
 	 * TODO: project2/process_termination.html).
 	 * TODO: We recommend you to implement process resource cleanup here. */
+
+	struct child_status *cs = curr->child_status;
+
+	cs->exit_status = curr->exit_status;
+	cs->is_exited = true;
+	sema_up(&cs->wait_sema);
 
 	process_cleanup ();
 }
