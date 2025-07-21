@@ -318,6 +318,57 @@ process_activate (struct thread *next) {
 	tss_update (next);
 }
 
+/// @brief 현재 스레드의 파일 디스크립터 테이블에 파일을 추가하는 함수
+/// @param file 넣을 파일
+/// @return 성공 시 table 인덱스 반환, 실패 시 -1 반환
+int process_add_file(struct file *file)
+{
+	if (file == NULL)
+		return -1;
+	
+	struct thread *cur_thread = thread_current();
+
+	for (int fd_index = 3; fd_index < FDCOUNT_LIMIT; fd_index++)
+	{
+		if (cur_thread->fd_table[fd_index] == NULL)
+		{
+			cur_thread->fd_table[fd_index] = file;
+			return fd_index;
+		}
+	}
+	return -1;
+}
+
+/// @brief 현재 스레드의 fd번째 파일 정보 얻는 함수
+struct file* process_get_file(int fd)
+{
+	struct thread *cur_thread = thread_current();
+
+	// fd가 유효 범위 밖이거나, fd 가 3보다 작거나, fd_table[fd]가 NULL이라면
+	if (fd >= FDCOUNT_LIMIT || fd < 3 || cur_thread->fd_table[fd] == NULL) 
+		return NULL; // NULL 반환
+	
+	return cur_thread->fd_table[fd];
+}
+
+/// @brief 현재 스레드의 fd번째 파일 삭제하는 함수
+/// @param fd 파일 디스크립터 인덱스
+/// @return 성공 시 0, 실패 시 -1 반환
+int process_close_file(int fd)
+{
+	struct thread *cur_thread = thread_current();
+
+	if (fd >= FDCOUNT_LIMIT || fd < 3 || cur_thread->fd_table[fd] == NULL) 
+	{
+		return -1;
+	}
+	else
+	{
+		cur_thread->fd_table[fd] = NULL;
+		return 0;
+	}
+}
+
 /* We load ELF binaries.  The following definitions are taken
  * from the ELF specification, [ELF1], more-or-less verbatim.  */
 

@@ -11,6 +11,7 @@
 #include "filesys/filesys.h"
 #include "kernel/console.h"
 #include "filesys/file.h"
+#include "include/userprog/process.h"
 
 void syscall_entry (void);
 void syscall_handler (struct intr_frame *);
@@ -94,12 +95,7 @@ void syscall_handler (struct intr_frame *f UNUSED)
 		exit(-1);
 		break;
 	}
-}
-
-struct file* get_file(int fd)
-{
-	struct thread *cur_thread = thread_current();
-
+	
 }
 
 void halt(void)
@@ -160,7 +156,12 @@ int open (const char *file)
 
 int filesize (int fd)
 {
+	struct file *file = process_get_file(fd);
+	
+	if (file == NULL || fd < 3)
+		return;
 
+	return file_length(file);
 }
 
 int read (int fd, void *buffer, unsigned length)
@@ -199,5 +200,11 @@ unsigned tell (int fd)
 
 void close (int fd)
 {
-	
+	struct file *file = process_get_file(fd);
+
+	if (file == NULL || fd < 3)
+		return;
+
+	process_close_file(fd);	
+	file_close(file);
 }
