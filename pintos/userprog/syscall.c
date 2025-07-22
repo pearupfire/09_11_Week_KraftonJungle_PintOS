@@ -97,7 +97,6 @@ void syscall_handler (struct intr_frame *f UNUSED)
 		exit(-1);
 		break;
 	}
-	
 }
 
 void halt(void)
