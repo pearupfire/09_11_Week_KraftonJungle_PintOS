@@ -115,8 +115,11 @@ file_write_at (struct file *file, const void *buffer, off_t size,
 
 /* Prevents write operations on FILE's underlying inode
  * until file_allow_write() is called or FILE is closed. */
-void
-file_deny_write (struct file *file) {
+
+/// @brief 파일에 대한 쓰기 권한을 일시적으로 비활성화, 다른 쓰기 작업이 파일에 접근하지 못하도록 하는 함수
+/// @param file 쓰기를 금지할 대상 파일
+void file_deny_write (struct file *file) 
+{
 	ASSERT (file != NULL);
 	if (!file->deny_write) {
 		file->deny_write = true;

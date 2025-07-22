@@ -1,0 +1,18 @@
+{
+    "files.associations": {
+        "thread.h": "c",
+        "intr-stubs.h": "c",
+        "debug.h": "c",
+        "ostream": "c",
+        "typeinfo": "c",
+        "random": "c",
+        "flags.h": "c",
+        "interrupt.h": "c",
+        "directory.h": "c",
+        "loader.h": "c",
+        "filesys.h": "c",
+        "console.h": "c",
+        "file.h": "c",
+        "process.h": "c"
+    }
+}

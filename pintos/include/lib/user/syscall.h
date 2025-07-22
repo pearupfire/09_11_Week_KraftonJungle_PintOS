@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include <debug.h>
 #include <stddef.h>
+#include "threads/synch.h"
 
 /* Process identifier. */
 typedef int pid_t;
@@ -20,6 +21,7 @@ typedef int off_t;
 #define EXIT_SUCCESS 0          /* Successful execution. */
 #define EXIT_FAILURE 1          /* Unsuccessful execution. */
 
+
 /* Projects 2 and later. */
 void halt (void) NO_RETURN;
 void exit (int status) NO_RETURN;
@@ -35,6 +37,7 @@ int write (int fd, const void *buffer, unsigned length);
 void seek (int fd, unsigned position);
 unsigned tell (int fd);
 void close (int fd);
+void check_address(void *address);
 
 int dup2(int oldfd, int newfd);
 

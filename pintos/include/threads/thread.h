@@ -1,14 +1,14 @@
 #ifndef THREADS_THREAD_H
 #define THREADS_THREAD_H
-
+#define USERPROG
 #include <debug.h>
 #include <list.h>
 #include <stdint.h>
+#include "threads/synch.h"
 #include "threads/interrupt.h"
 #ifdef VM
 #include "vm/vm.h"
 #endif
-
 
 /* States in a thread's life cycle. */
 enum thread_status {
@@ -27,6 +27,8 @@ typedef int tid_t;
 #define PRI_MIN 0                       /* Lowest priority. */
 #define PRI_DEFAULT 31                  /* Default priority. */
 #define PRI_MAX 63                      /* Highest priority. */
+#define FDPAGES 3
+#define FDCOUNT_LIMIT FDPAGES * (1 << 9) // 페이지 크기 4kb / 파일 포인터 8바이트 = 512
 
 /* A kernel thread or user process.
  *
@@ -87,17 +89,37 @@ typedef int tid_t;
  * blocked state is on a semaphore wait list. */
 struct thread {
 	/* Owned by thread.c. */
+	
 	tid_t tid;                          /* Thread identifier. */
 	enum thread_status status;          /* Thread state. */
 	char name[16];                      /* Name (for debugging purposes). */
 	int priority;                       /* Priority. */
 
+	int original_priority; 		  // 기부 받기 전 우선 순위
+	struct lock *waiting_lock;    // 대기 중인 락
+	struct list donations;        // 기부 받은 리스트들
+	struct list_elem donation_elem; // 기부자로 들어갈때 쓰는 연결점
+
 	/* Shared between thread.c and synch.c. */
 	struct list_elem elem;              /* List element. */
+	int64_t wakeup_tick; 				// tick이 되면 깨어나야 함
+
+	/* userprog thread field*/
+	struct file *runn_file;
 
 #ifdef USERPROG
 	/* Owned by userprog/process.c. */
 	uint64_t *pml4;                     /* Page map level 4 */
+	int exit_status;
+
+	/* 자식 프로세스 관리 */
+	struct child_status *child_status;
+	struct list child_list;
+
+	int fd_index; 							// 파일 디스크립터 인덱스
+	struct file **fd_table;
+	// struct file *fd_table[FDCOUNT_LIMIT];	// 파일 디스크립터 테이블
+ 
 #endif
 #ifdef VM
 	/* Table for whole virtual memory owned by thread. */
@@ -109,10 +131,22 @@ struct thread {
 	unsigned magic;                     /* Detects stack overflow. */
 };
 
+/* 자식 프로세스 구조체 */
+struct child_status {
+	tid_t child_tid; // 자식 TID
+	int exit_status; // 자식 종료 코드
+	bool has_been_waited; // 부모가 wait()을 했는지 확인하는
+	bool is_exited; // 자식이 종료됐는지 여부 (이 원소가)
+	struct semaphore wait_sema; // 부모가 자식을 기다릴 때 사용하는 세마포어
+	struct list_elem elem; // 부모의 child_list에 연결될 리스트 노드
+};
+
 /* If false (default), use round-robin scheduler.
    If true, use multi-level feedback queue scheduler.
    Controlled by kernel command-line option "-o mlfqs". */
 extern bool thread_mlfqs;
+
+bool cmp_priority(const struct list_elem *a, const struct list_elem *b, void *aux UNUSED);
 
 void thread_init (void);
 void thread_start (void);
@@ -140,7 +174,7 @@ int thread_get_nice (void);
 void thread_set_nice (int);
 int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
-
+bool cmp_priority(const struct list_elem *a, const struct list_elem *b, void *aux);
 void do_iret (struct intr_frame *tf);
 
 #endif /* threads/thread.h */

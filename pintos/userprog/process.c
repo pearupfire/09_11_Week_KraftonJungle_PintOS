@@ -2,8 +2,9 @@
 #include <debug.h>
 #include <inttypes.h>
 #include <round.h>
-#include <stdio.h>
+#include <lib/stdio.h>
 #include <stdlib.h>
+#include <lib/string.h>
 #include <string.h>
 #include "userprog/gdt.h"
 #include "userprog/tss.h"
@@ -50,10 +51,26 @@ process_create_initd (const char *file_name) {
 		return TID_ERROR;
 	strlcpy (fn_copy, file_name, PGSIZE);
 
+	// 임시
+	char *ptr;
+	strtok_r(file_name, " ", &ptr);
+
 	/* Create a new thread to execute FILE_NAME. */
 	tid = thread_create (file_name, PRI_DEFAULT, initd, fn_copy);
 	if (tid == TID_ERROR)
 		palloc_free_page (fn_copy);
+
+	// // child status 생성 및 추가
+	// struct child_status *cs = palloc_get_page(PAL_ZERO);
+	// cs->child_tid = tid;
+	// cs->has_been_waited = false;
+	// cs->is_exited = false;
+	// sema_init(&cs->wait_sema, 0);
+
+	// struct thread *t_current = thread_current();
+	// list_push_back(&t_current->child_list, &cs->elem);
+	// t_current->child_status = cs;
+
 	return tid;
 }
 
@@ -160,8 +177,8 @@ error:
 
 /* Switch the current execution context to the f_name.
  * Returns -1 on fail. */
-int
-process_exec (void *f_name) {
+int process_exec(void *f_name) 
+{
 	char *file_name = f_name;
 	bool success;
 
@@ -174,21 +191,75 @@ process_exec (void *f_name) {
 	_if.eflags = FLAG_IF | FLAG_MBS;
 
 	/* We first kill the current context */
+	// 현재 사용자 프로세스 정리
 	process_cleanup ();
 
-	/* And then load the binary */
-	success = load (file_name, &_if);
+	/* 파싱해서 넘기기 */
+	char *token, *save_ptr; // 토큰 분리에 사용할 포인터
+	char *arg_list[32]; 	// 파싱한 문자를 저장할 배열
+	int arg_cnt = 0;		// 인자 개수
 
-	/* If load failed, quit. */
+
+	// strtok_r를 이름을 공백으로 분할
+	for (token = strtok_r(file_name," ", &save_ptr); token != NULL; token = strtok_r(NULL, " ", &save_ptr))
+		arg_list[arg_cnt++] = token;	// 분리한 토큰을 arg_list에 저장
+	
+	/* And then load the binary */
+	// ELF 실행 파일 로드
+	success = load (arg_list[0], &_if);
+	// file_name 프리
+	argument_stack(arg_list, arg_cnt, &_if);
+	hex_dump (_if.rsp, _if.rsp, USER_STACK - _if.rsp, true);
 	palloc_free_page (file_name);
+	
+	/* If load failed, quit. */
+	// 로드 실패 시 종료
 	if (!success)
 		return -1;
 
 	/* Start switched process. */
+	// 성공 시 프로세스 시작
 	do_iret (&_if);
 	NOT_REACHED ();
 }
 
+void argument_stack(char **argv, int argc, struct intr_frame *if_)
+{
+	char *arg_addr[32]; // 인자 문자열이 위치한 주소를 저장할 배열
+	int argv_len;
+
+	// 문자열을 유저 스택에 복사 (역순으로)
+	for (int i = argc - 1; i >= 0; i--)
+	{
+		argv_len = strlen(argv[i]) + 1; // 널 문자 포함 길이 계산
+		if_->rsp -= argv_len;			// 스택 포인터 감소 (문자열 길이만큼 감소)
+		memcpy(if_->rsp, argv[i], argv_len); // 해당 인자 스택에 복사
+		arg_addr[i] = if_->rsp; 		// 복사한 문자열의 시작 주소 저장 
+	}
+
+	// 8바이트 정렬을 위해 패딩 처리
+	while (if_->rsp % 8) // 8의 배수가 될때까지
+		*(uint8_t *)(--if_->rsp) = 0; // 1 바이트 씩 0 패딩 후 스택 포인터 감소
+	
+	// argc 배열의 끝을 나타내는 NULL 포인터 추가 argc[argc] = NULL
+	if_->rsp -= 8;
+	memset(if_->rsp, 0, sizeof(char *));
+
+	// argv[i] 배열의 각 요소 (인자 문자열의 주소)를 스택에 저장
+	for (int i = argc - 1; i >= 0; i--)
+	{
+		if_->rsp -= 8;
+		memcpy(if_->rsp, &arg_addr[i], sizeof(char *)); // 해당 인자 문자열 주소를 스택에 복사
+	}
+	
+	// fake return address
+	if_->rsp -= 8;
+	memset((void *)if_->rsp, 0, 8);
+
+	// 레지스터 설정
+	if_->R.rdi = argc; // 첫 번째 인자 argc -> %rdi
+	if_->R.rsi = if_->rsp + 8; // 두 번째 인자 argv -> %rsi
+}
 
 /* Waits for thread TID to die and returns its exit status.  If
  * it was terminated by the kernel (i.e. killed due to an
@@ -201,20 +272,54 @@ process_exec (void *f_name) {
  * does nothing. */
 int
 process_wait (tid_t child_tid UNUSED) {
-	/* XXX: Hint) The pintos exit if process_wait (initd), we recommend you
-	 * XXX:       to add infinite loop here before
-	 * XXX:       implementing the process_wait. */
-	return -1;
+	struct thread *cur = thread_current();
+	struct list_elem *e;
+	struct child_status *cs = NULL;
+
+	for (e = list_begin(&cur->child_list); e != list_end(&cur->child_list); e = list_next(e)) {
+		struct child_status *entry = list_entry(e, struct child_status, elem);
+		if (entry->child_tid == child_tid) {
+			cs = entry;
+			break;
+		}
+	}
+
+	if (cs == NULL || cs->has_been_waited) {
+		return -1;
+	}
+
+	cs->has_been_waited = true;
+
+	if (!cs->is_exited) {
+		sema_down(&cs->wait_sema);
+	}
+
+	int status = cs->exit_status;
+	list_remove(&cs->elem);
+	palloc_free_page(cs);
+	return status;
+
+	// while (true)
+	// {
+	// 	/* code */
+	// }
+	// return -1;
 }
 
 /* Exit the process. This function is called by thread_exit (). */
 void
 process_exit (void) {
-	struct thread *curr = thread_current ();
 	/* TODO: Your code goes here.
 	 * TODO: Implement process termination message (see
 	 * TODO: project2/process_termination.html).
 	 * TODO: We recommend you to implement process resource cleanup here. */
+	
+	struct thread *curr = thread_current ();
+	struct child_status *cs = curr->child_status;
+
+	cs->exit_status = curr->exit_status;
+	cs->is_exited = true;
+	sema_up(&cs->wait_sema);
 
 	process_cleanup ();
 }
@@ -255,6 +360,57 @@ process_activate (struct thread *next) {
 
 	/* Set thread's kernel stack for use in processing interrupts. */
 	tss_update (next);
+}
+
+/// @brief 현재 스레드의 파일 디스크립터 테이블에 파일을 추가하는 함수
+/// @param file 넣을 파일
+/// @return 성공 시 table 인덱스 반환, 실패 시 -1 반환
+int process_add_file(struct file *file)
+{
+	if (file == NULL)
+		return -1;
+	
+	struct thread *cur_thread = thread_current();
+
+	for (int fd_index = 3; fd_index < FDCOUNT_LIMIT; fd_index++)
+	{
+		if (cur_thread->fd_table[fd_index] == NULL)
+		{
+			cur_thread->fd_table[fd_index] = file;
+			return fd_index;
+		}
+	}
+	return -1;
+}
+
+/// @brief 현재 스레드의 fd번째 파일 정보 얻는 함수
+struct file* process_get_file(int fd)
+{
+	struct thread *cur_thread = thread_current();
+
+	// fd가 유효 범위 밖이거나, fd 가 3보다 작거나, fd_table[fd]가 NULL이라면
+	if (fd >= FDCOUNT_LIMIT || fd < 3 || cur_thread->fd_table[fd] == NULL) 
+		return NULL; // NULL 반환
+	
+	return cur_thread->fd_table[fd];
+}
+
+/// @brief 현재 스레드의 fd번째 파일 삭제하는 함수
+/// @param fd 파일 디스크립터 인덱스
+/// @return 성공 시 0, 실패 시 -1 반환
+int process_close_file(int fd)
+{
+	struct thread *cur_thread = thread_current();
+
+	if (fd >= FDCOUNT_LIMIT || fd < 3 || cur_thread->fd_table[fd] == NULL) 
+	{
+		return -1;
+	}
+	else
+	{
+		cur_thread->fd_table[fd] = NULL;
+		return 0;
+	}
 }
 
 /* We load ELF binaries.  The following definitions are taken
@@ -320,8 +476,8 @@ static bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
  * Stores the executable's entry point into *RIP
  * and its initial stack pointer into *RSP.
  * Returns true if successful, false otherwise. */
-static bool
-load (const char *file_name, struct intr_frame *if_) {
+static bool load (const char *file_name, struct intr_frame *if_) 
+{
 	struct thread *t = thread_current ();
 	struct ELF ehdr;
 	struct file *file = NULL;
