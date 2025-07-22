@@ -209,7 +209,7 @@ int process_exec(void *f_name)
 	success = load (arg_list[0], &_if);
 	// file_name 프리
 	argument_stack(arg_list, arg_cnt, &_if);
-	hex_dump (_if.rsp, _if.rsp, USER_STACK - _if.rsp, true);
+	// hex_dump (_if.rsp, _if.rsp, USER_STACK - _if.rsp, true);
 	palloc_free_page (file_name);
 	
 	/* If load failed, quit. */
@@ -272,38 +272,34 @@ void argument_stack(char **argv, int argc, struct intr_frame *if_)
  * does nothing. */
 int
 process_wait (tid_t child_tid UNUSED) {
-	struct thread *cur = thread_current();
-	struct list_elem *e;
-	struct child_status *cs = NULL;
+	// struct thread *cur = thread_current();
+	// struct list_elem *e;
+	// struct child_status *cs = NULL;
 
-	for (e = list_begin(&cur->child_list); e != list_end(&cur->child_list); e = list_next(e)) {
-		struct child_status *entry = list_entry(e, struct child_status, elem);
-		if (entry->child_tid == child_tid) {
-			cs = entry;
-			break;
-		}
-	}
-
-	if (cs == NULL || cs->has_been_waited) {
-		return -1;
-	}
-
-	cs->has_been_waited = true;
-
-	if (!cs->is_exited) {
-		sema_down(&cs->wait_sema);
-	}
-
-	int status = cs->exit_status;
-	list_remove(&cs->elem);
-	palloc_free_page(cs);
-	return status;
-
-	// while (true)
-	// {
-	// 	/* code */
+	// for (e = list_begin(&cur->child_list); e != list_end(&cur->child_list); e = list_next(e)) {
+	// 	struct child_status *entry = list_entry(e, struct child_status, elem);
+	// 	if (entry->child_tid == child_tid) {
+	// 		cs = entry;
+	// 		break;
+	// 	}
 	// }
-	// return -1;
+
+	// if (cs == NULL || cs->has_been_waited) {
+	// 	return -1;
+	// }
+
+	// cs->has_been_waited = true;
+
+	// if (!cs->is_exited) {
+	// 	sema_down(&cs->wait_sema);
+	// }
+
+	// int status = cs->exit_status;
+	// list_remove(&cs->elem);
+	// palloc_free_page(cs);
+	// return status;
+
+	thread_sleep(300);
 }
 
 /* Exit the process. This function is called by thread_exit (). */
@@ -315,11 +311,11 @@ process_exit (void) {
 	 * TODO: We recommend you to implement process resource cleanup here. */
 	
 	struct thread *curr = thread_current ();
-	struct child_status *cs = curr->child_status;
+	// struct child_status *cs = curr->child_status;
 
-	cs->exit_status = curr->exit_status;
-	cs->is_exited = true;
-	sema_up(&cs->wait_sema);
+	// cs->exit_status = curr->exit_status;
+	// cs->is_exited = true;
+	// sema_up(&cs->wait_sema);
 
 	process_cleanup ();
 }

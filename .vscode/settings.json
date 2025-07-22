@@ -13,6 +13,19 @@
         "filesys.h": "c",
         "console.h": "c",
         "file.h": "c",
-        "process.h": "c"
+        "process.h": "c",
+        "exception": "c",
+        "memory_resource": "c",
+        "iosfwd": "c",
+        "new": "c",
+        "stop_token": "c",
+        "streambuf": "c",
+        "*.inc": "c",
+        "syscall.h": "c",
+        "init.h": "c",
+        "stdio.h": "c",
+        "syscall-nr.h": "c",
+        "gdt.h": "c",
+        "intrinsic.h": "c"
     }
 }

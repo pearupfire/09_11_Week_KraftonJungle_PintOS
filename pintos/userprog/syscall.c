@@ -11,6 +11,7 @@
 #include "filesys/filesys.h"
 #include "filesys/file.h"
 #include "include/userprog/process.h"
+#include "threads/init.h"
 
 void syscall_entry (void);
 void syscall_handler (struct intr_frame *);
@@ -45,66 +46,73 @@ syscall_init (void) {
 }
 
 /* The main system call interface */
-void syscall_handler (struct intr_frame *f UNUSED) 
-{
-	int sys_num = f->R.rax;
-
-	switch (sys_num)
+	void syscall_handler (struct intr_frame *f UNUSED) 
 	{
-	case SYS_HALT:
-		halt();
-		break;
-	case SYS_EXIT:
-		exit(f->R.rdi);
-		break;
-	case SYS_FORK:
-		f->R.rax = fork(f->R.rdi);
-		break;
-	case SYS_EXEC:
-		f->R.rax = exec(f->R.rdi);
-		break;
-	case SYS_WAIT:
-		f->R.rax = wait(f->R.rdi);
-		break;
-	case SYS_CREATE:
-		f->R.rax = create(f->R.rdi, f->R.rsi);
-		break;
-	case SYS_REMOVE:
-		f->R.rax = remove(f->R.rdi);
-		break;
-	case SYS_OPEN:
-		f->R.rax = open(f->R.rdi);
-		break;
-	case SYS_FILESIZE:
-		f->R.rax = filesize(f->R.rdi);
-		break;
-	case SYS_READ:
-		f->R.rax = read(f->R.rdi, f->R.rsi, f->R.rdx);
-		break;
-	case SYS_WRITE:
-		f->R.rax = write(f->R.rdi, f->R.rsi, f->R.rdx);
-		break;
-	case SYS_SEEK:
-		seek(f->R.rdi, f->R.rsi);
-		break;
-	case SYS_TELL:
-		f->R.rax = tell(f->R.rdi);
-		break;
-	case SYS_CLOSE:
-		close(f->R.rdi);
-		break;
-	default:
-		exit(-1);
-		break;
+		int sys_num = f->R.rax;
+	
+		switch (sys_num)
+		{
+		case SYS_HALT:
+			halt_();
+			break;
+		case SYS_EXIT:
+			exit_(f->R.rdi);
+			break;
+		case SYS_FORK:
+			f->R.rax = fork_(f->R.rdi);
+			break;
+		case SYS_EXEC:
+			f->R.rax = exec_(f->R.rdi);
+			break;
+		case SYS_WAIT:
+			f->R.rax = wait_(f->R.rdi);
+			break;
+		case SYS_CREATE:
+			f->R.rax = create_(f->R.rdi, f->R.rsi);
+			break;
+		case SYS_REMOVE:
+			f->R.rax = remove_(f->R.rdi);
+			break;
+		case SYS_OPEN:
+			f->R.rax = open_(f->R.rdi);
+			break;
+		case SYS_FILESIZE:
+			f->R.rax = filesize_(f->R.rdi);
+			break;
+		case SYS_READ:
+			f->R.rax = read_(f->R.rdi, f->R.rsi, f->R.rdx);
+			break;
+		case SYS_WRITE:
+			f->R.rax = write_(f->R.rdi, f->R.rsi, f->R.rdx);
+			break;
+		case SYS_SEEK:
+			seek_(f->R.rdi, f->R.rsi);
+			break;
+		case SYS_TELL:
+			f->R.rax = tell_(f->R.rdi);
+			break;
+		case SYS_CLOSE:
+			close_(f->R.rdi);
+			break;
+		default:
+			exit_(-1);
+			break;
+		}
 	}
+
+void check_address(void *address)
+{	
+	// 커널영역이거나, address가 null이거나, 가상페이지에 할당되었는지
+	if (is_kernel_vaddr(address) || address == NULL || pml4_get_page(thread_current()->pml4, address))
+		exit_(-1);
 }
 
-void halt(void)
+void halt_(void)
 {
 	power_off();
 }
 
-void exit(int status)
+void exit_(int status)
 {
 	struct thread *cur = thread_current(); // 현재 스레드 저장
 	cur->exit_status = status; // 종료 상태 저장
@@ -112,55 +120,48 @@ void exit(int status)
 	thread_exit(); // 현재 스레드 종료
 }
 
-pid_t fork(const char *thread_name)
+pid_t fork_(const char *thread_name)
 {
 
 }
 
-int exec(const char *file)
+int exec_(const char *file)
 {
 
 }
 
-int wait(pid_t child_tid)
+int wait_(pid_t child_tid)
 {
 	return process_wait(child_tid);
 }
 
-void check_address(void *address)
-{	
-	// 커널영역이거나, address가 null이거나, 가상페이지에 할당되었는지
-	if (is_kernel_vaddr(address) || address == NULL || pml4_get_page(thread_current()->pml4, address))
-		exit(-1);
-}
-
-bool create (const char *file, unsigned initial_size)
+bool create_(const char *file, unsigned initial_size)
 {
 	check_address(file);
-
+	
 	// 주어진 이름과 초기 크기로 새로운 파일 생성하는 함수
 	return filesys_create(file, initial_size);
 }
 
-bool remove (const char *file)
+bool remove_(const char *file)
 {
 	check_address(file);
-
+	
 	// 주어진 이름의 파일 삭제하는 함수
 	return filesys_remove(file);
 }
 
-int open (const char *file)
+int open_(const char *file)
 {
 	check_address(file);
-
+	
 	struct file *open_file = filesys_open(file);
-
+	
 	if (open_file == NULL)
-		return -1;
-
+	return -1;
+	
 	int fd = process_add_file(open_file);
-
+	
 	if (fd == -1)
 	{
 		file_close(open_file);
@@ -170,25 +171,25 @@ int open (const char *file)
 	return fd;
 }
 
-int filesize (int fd)
+int filesize_(int fd)
 {
 	struct file *file = process_get_file(fd);
 	
 	if (file == NULL || fd < 3)
-		return;
-
+	return;
+	
 	return file_length(file);
 }
 
-int read (int fd, void *buffer, unsigned length)
+int read_(int fd, void *buffer, unsigned length)
 {
 	int read_bytes = 0;
-
+	
 	if (fd == 0) // 파일 디스크립터가 0이면
 	{
 		char c;
 		unsigned char *buf = buffer;
-
+		
 		for (int i = 0; i < length; i++) // 길이만큼 반복하고
 		{
 			c = input_getc(); // input_getc() = 키보드 하나하나 입력이 가능
@@ -205,10 +206,10 @@ int read (int fd, void *buffer, unsigned length)
 	else // 3 이상 이라면
 	{
 		struct file *file = process_get_file(fd); 
-
+		
 		if (file == NULL)
-			return -1;
-
+		return -1;
+		
 		lock_acquire(&filesys_lock); // race condition 방지를 위해 잠금
 		read_bytes = file_read(file, buffer, length);
 		lock_release(&filesys_lock); // 해제
@@ -216,13 +217,13 @@ int read (int fd, void *buffer, unsigned length)
 	}
 }
 
-int write (int fd, const void *buffer, unsigned length)
+int write_(int fd, const void *buffer, unsigned length)
 {
 	if (fd <= 0)
 	{
 		return -1;
 	}
-	else if (fd == 1 || fd == 2)
+	else if (fd == 1)
 	{
 		putbuf(buffer, length);
 		return length;
@@ -231,45 +232,45 @@ int write (int fd, const void *buffer, unsigned length)
 	{
 		struct file *file = process_get_file(fd);
 		int write_bytes = -1;
-
+		
 		if (file == NULL)
-			return -1;
+		return -1;
 		
 		lock_acquire(&filesys_lock); // race condition 방지 락
 		write_bytes = file_write(file, buffer, length);
 		lock_release(&filesys_lock); // 락 해제
-
+		
 		return write_bytes;
 	}
 }
 
-void seek (int fd, unsigned position)
+void seek_(int fd, unsigned position)
 {
 	struct file *file = process_get_file(fd);
-
+	
 	if (file == NULL || fd < 3)
-		return;
+	return;
 	
 	file_seek(file, position);
 }
 
-unsigned tell (int fd)
+unsigned tell_(int fd)
 {
 	struct file *file = process_get_file(fd);
-
+	
 	if (file == NULL || fd < 3)
-		return;
-
+	return;
+	
 	return file_tell(file);
 }
 
-void close (int fd)
+void close_(int fd)
 {
 	struct file *file = process_get_file(fd);
-
+	
 	if (file == NULL || fd < 3)
-		return;
-
+	return;
+	
 	process_close_file(fd);	
-	file_close(file);
+		file_close(file);
 }
