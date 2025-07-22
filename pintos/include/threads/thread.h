@@ -1,6 +1,5 @@
 #ifndef THREADS_THREAD_H
 #define THREADS_THREAD_H
-#define USERPROG
 #include <debug.h>
 #include <list.h>
 #include <stdint.h>
@@ -117,8 +116,8 @@ struct thread {
 	struct list child_list;
 
 	int fd_index; 							// 파일 디스크립터 인덱스
-	struct file **fd_table;
-	// struct file *fd_table[FDCOUNT_LIMIT];	// 파일 디스크립터 테이블
+	// struct file *fd_table[FDCOUNT_LIMIT];	// 파일 디스크립터 테이블 -> 정적 할당
+	struct file **fd_table; // -> 동적 할당하기 위해 변경
  
 #endif
 #ifdef VM

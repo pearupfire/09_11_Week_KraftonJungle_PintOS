@@ -60,16 +60,16 @@ process_create_initd (const char *file_name) {
 	if (tid == TID_ERROR)
 		palloc_free_page (fn_copy);
 
-	// // child status 생성 및 추가
-	// struct child_status *cs = palloc_get_page(PAL_ZERO);
-	// cs->child_tid = tid;
-	// cs->has_been_waited = false;
-	// cs->is_exited = false;
-	// sema_init(&cs->wait_sema, 0);
+	// child status 생성 및 추가
+	struct child_status *cs = palloc_get_page(PAL_ZERO);
+	cs->child_tid = tid;
+	cs->has_been_waited = false;
+	cs->is_exited = false;
+	sema_init(&cs->wait_sema, 0);
 
-	// struct thread *t_current = thread_current();
-	// list_push_back(&t_current->child_list, &cs->elem);
-	// t_current->child_status = cs;
+	struct thread *t_current = thread_current();
+	list_push_back(&t_current->child_list, &cs->elem);
+	t_current->child_status = cs;
 
 	return tid;
 }
@@ -298,12 +298,6 @@ process_wait (tid_t child_tid UNUSED) {
 	list_remove(&cs->elem);
 	palloc_free_page(cs);
 	return status;
-
-	// while (true)
-	// {
-	// 	/* code */
-	// }
-	// return -1;
 }
 
 /* Exit the process. This function is called by thread_exit (). */
