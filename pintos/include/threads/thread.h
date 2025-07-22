@@ -4,6 +4,7 @@
 #include <debug.h>
 #include <list.h>
 #include <stdint.h>
+#include "threads/synch.h"
 #include "threads/interrupt.h"
 #ifdef VM
 #include "vm/vm.h"
@@ -134,7 +135,7 @@ struct child_status {
 	int exit_status; // 자식 종료 코드
 	bool has_been_waited; // 부모가 wait()을 했는지 확인하는
 	bool is_exited; // 자식이 종료됐는지 여부 (이 원소가)
-	struct sempahore *wait_sema; // 부모가 자식을 기다릴 때 사용하는 세마포어
+	struct semaphore wait_sema; // 부모가 자식을 기다릴 때 사용하는 세마포어
 	struct list_elem elem; // 부모의 child_list에 연결될 리스트 노드
 };
 

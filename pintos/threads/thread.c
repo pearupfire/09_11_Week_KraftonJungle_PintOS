@@ -369,8 +369,9 @@ void thread_yield(void)
 		// list_push_back (&ready_list, &curr->elem); // 주어진 항목을 리스트의 마지막에 삽입
 	
 	// do_schedule(THREAD_READY);
-	curr->status = THREAD_READY;
-	schedule();
+	// curr->status = THREAD_READY;
+	// schedule();
+	do_schedule(THREAD_READY);
 	intr_set_level(old_level);
 }
 
