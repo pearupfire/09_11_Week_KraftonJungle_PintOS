@@ -119,8 +119,17 @@ pid_t fork(const char *thread_name)
 
 int exec(const char *file)
 {
+	check_address(file); //유효성 검사
 
+	char *fn_copy = palloc_get_page(0); //페이지 할당
+	if (fn_copy == NULL) //할당 실패시 종료
+		exit(-1);
+	strlcpy(fn_copy, file, PGSIZE); //file->fn_copy로 복사
+
+	if (process_exec(fn_copy) == -1) //로드실패시 종료
+		exit(-1);
 }
+
 
 int wait(pid_t child_tid)
 {
