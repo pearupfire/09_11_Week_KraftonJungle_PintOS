@@ -26,8 +26,8 @@ typedef int tid_t;
 #define PRI_MIN 0                       /* Lowest priority. */
 #define PRI_DEFAULT 31                  /* Default priority. */
 #define PRI_MAX 63                      /* Highest priority. */
-#define FDPAGES 3
-#define FDCOUNT_LIMIT FDPAGES * (1 << 9) // 페이지 크기 4kb / 파일 포인터 8바이트 = 512
+#define FDTPAGES 3
+#define FDCOUNT_LIMIT FDTPAGES * (1 << 9) // 페이지 크기 4kb / 파일 포인터 8바이트 = 512
 
 /* A kernel thread or user process.
  *
@@ -118,7 +118,7 @@ struct thread {
 	int fd_index; 							// 파일 디스크립터 인덱스
 	// struct file *fd_table[FDCOUNT_LIMIT];	// 파일 디스크립터 테이블 -> 정적 할당
 	struct file **fd_table; // -> 동적 할당하기 위해 변경
- 
+	
 #endif
 #ifdef VM
 	/* Table for whole virtual memory owned by thread. */

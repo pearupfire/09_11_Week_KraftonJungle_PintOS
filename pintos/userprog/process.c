@@ -314,7 +314,7 @@ process_exit (void) {
 	cs->exit_status = curr->exit_status;
 	cs->is_exited = true;
 	sema_up(&cs->wait_sema);
-
+	
 	process_cleanup ();
 }
 

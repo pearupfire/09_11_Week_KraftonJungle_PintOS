@@ -216,7 +216,7 @@ tid_t thread_create (const char *name, int priority, thread_func *function, void
 	tid = t->tid = allocate_tid ();
 
 #ifdef USERPROG
-	t->fd_table = palloc_get_multiple(PAL_ZERO, FDPAGES);
+	t->fd_table = palloc_get_multiple(PAL_ZERO, FDTPAGES);
 
 	if (t->fd_table == NULL)
 		return TID_ERROR;
