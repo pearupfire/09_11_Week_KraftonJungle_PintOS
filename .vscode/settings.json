@@ -26,6 +26,8 @@
         "stdio.h": "c",
         "syscall-nr.h": "c",
         "gdt.h": "c",
-        "intrinsic.h": "c"
+        "intrinsic.h": "c",
+        "vaddr.h": "c",
+        "inttypes.h": "c"
     }
 }

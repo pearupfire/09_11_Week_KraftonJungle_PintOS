@@ -60,17 +60,6 @@ process_create_initd (const char *file_name) {
 	if (tid == TID_ERROR)
 		palloc_free_page (fn_copy);
 
-	// // child status 생성 및 추가
-	// struct child_status *cs = palloc_get_page(PAL_ZERO);
-	// cs->child_tid = tid;
-	// cs->has_been_waited = false;
-	// cs->is_exited = false;
-	// sema_init(&cs->wait_sema, 0);
-
-	// struct thread *t_current = thread_current();
-	// list_push_back(&t_current->child_list, &cs->elem);
-	// t_current->child_status = cs;
-
 	return tid;
 }
 
@@ -90,11 +79,33 @@ initd (void *f_name) {
 
 /* Clones the current process as `name`. Returns the new process's thread id, or
  * TID_ERROR if the thread cannot be created. */
-tid_t
-process_fork (const char *name, struct intr_frame *if_ UNUSED) {
-	/* Clone current thread to new thread.*/
-	return thread_create (name,
-			PRI_DEFAULT, __do_fork, thread_current ());
+tid_t process_fork (const char *name, struct intr_frame *if_ UNUSED) 
+{
+	// 부모 스레드 불러오기
+	struct thread *parent = thread_current();
+
+	// 자식 스레드 생성
+	tid_t child_tid = thread_create(name, PRI_DEFAULT, __do_fork, parent);
+
+	// 자식 생성 실패 시
+	if (child_tid == TID_ERROR)
+		return TID_ERROR;
+
+	// tid로 자식 찾기
+	struct thread *child = get_child_tid(child_tid);
+
+	// 자식을 못찾으면
+	if (child == NULL)
+		return TID_ERROR;
+
+	// 자식이 fork 완료 될때까지 대기
+	sema_down(&child->fork_sema);
+
+	// 자식이 fork중 실패하였다면
+	if (child->exit_status == -1)
+		return TID_ERROR;
+
+	return child_tid;
 }
 
 #ifndef VM
@@ -133,8 +144,8 @@ duplicate_pte (uint64_t *pte, void *va, void *aux) {
  * Hint) parent->tf does not hold the userland context of the process.
  *       That is, you are required to pass second argument of process_fork to
  *       this function. */
-static void
-__do_fork (void *aux) {
+static void __do_fork (void *aux) 
+{
 	struct intr_frame if_;
 	struct thread *parent = (struct thread *) aux;
 	struct thread *current = thread_current ();
@@ -270,52 +281,66 @@ void argument_stack(char **argv, int argc, struct intr_frame *if_)
  *
  * This function will be implemented in problem 2-2.  For now, it
  * does nothing. */
-int
-process_wait (tid_t child_tid UNUSED) {
-	// struct thread *cur = thread_current();
-	// struct list_elem *e;
-	// struct child_status *cs = NULL;
+int process_wait (tid_t child_tid UNUSED) 
+{
+	struct thread *child_thread = get_child_tid(child_tid);
 
-	// for (e = list_begin(&cur->child_list); e != list_end(&cur->child_list); e = list_next(e)) {
-	// 	struct child_status *entry = list_entry(e, struct child_status, elem);
-	// 	if (entry->child_tid == child_tid) {
-	// 		cs = entry;
-	// 		break;
-	// 	}
-	// }
+	// child_thread가 NULL, 이미 준비중이라면
+	if (child_thread == NULL || child_thread->has_waited)
+		return -1;
 
-	// if (cs == NULL || cs->has_been_waited) {
-	// 	return -1;
-	// }
-
-	// cs->has_been_waited = true;
-
-	// if (!cs->is_exited) {
-	// 	sema_down(&cs->wait_sema);
-	// }
-
-	// int status = cs->exit_status;
-	// list_remove(&cs->elem);
-	// palloc_free_page(cs);
-	// return status;
+	child_thread->has_waited = true; // 중복 wait 방지
+	sema_down(&child_thread->exit_sema); // 자식의 exit_sema 대기 (자식 종료를 대기)
+	int exit_status = child_thread->exit_status; // 자식의 종료 상태 저장
+	list_remove(&child_thread->child_elem); // 자식 리스트에서 제거
+	sema_up(&child_thread->wait_sema); // 자식의 exit() 후 자기 메모리를 해제 할 수 있도록 wait_sema를 올릶
+	return exit_status;
 
 	thread_sleep(300);
 }
 
-/* Exit the process. This function is called by thread_exit (). */
-void
-process_exit (void) {
-	/* TODO: Your code goes here.
-	 * TODO: Implement process termination message (see
-	 * TODO: project2/process_termination.html).
-	 * TODO: We recommend you to implement process resource cleanup here. */
-	
-	struct thread *curr = thread_current ();
-	// struct child_status *cs = curr->child_status;
+struct thread *get_child_tid(tid_t child_tid) {
+    struct thread *parent = thread_current();
+    struct list_elem *e;
 
-	// cs->exit_status = curr->exit_status;
-	// cs->is_exited = true;
-	// sema_up(&cs->wait_sema);
+    for (e = list_begin(&parent->child_list); e != list_end(&parent->child_list); e = list_next(e)) {
+        struct thread *child = list_entry(e, struct thread, child_elem);
+        if (child->tid == child_tid)
+            return child;
+    }
+    return NULL;  // 못 찾으면 NULL
+}
+
+/* Exit the process. This function is called by thread_exit (). */
+void process_exit (void) 
+{
+	struct thread *curr = thread_current ();
+
+	// 파일 디스크립터 닫기
+	for (int fd = 0; fd < curr->fd_index; fd++)
+	{
+		struct file *f = curr->fd_table[fd];
+
+		if (f != NULL)
+		{
+			file_close(f);
+			curr->fd_table[fd] = NULL;
+		}
+	}
+	
+	// 러닝 중인 파일 닫기
+	if (curr->runn_file)
+		file_close(curr->runn_file);
+
+	// 테이블 메모리 해제
+	palloc_free_multiple(curr->fd_table, FDPAGES);
+
+	// 부모와 동기화
+	if (curr->parent != NULL)
+	{
+		sema_up(&curr->exit_sema); 	// 부모에게 죽음을 알림
+		sema_down(&curr->wait_sema);// 부모가 wait이 끝날대 까지 대기
+	}
 
 	process_cleanup ();
 }
@@ -376,6 +401,7 @@ int process_add_file(struct file *file)
 			return fd_index;
 		}
 	}
+
 	return -1;
 }
 
