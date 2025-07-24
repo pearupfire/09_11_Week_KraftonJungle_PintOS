@@ -12,6 +12,8 @@
 #include "filesys/file.h"
 #include "include/userprog/process.h"
 #include "threads/init.h"
+#include "include/threads/vaddr.h"
+#include "threads/mmu.h"
 
 void syscall_entry (void);
 void syscall_handler (struct intr_frame *);
@@ -103,7 +105,7 @@ syscall_init (void) {
 void check_address(void *address)
 {	
 	// 커널영역이거나, address가 null이거나, 가상페이지에 할당되었는지
-	if (is_kernel_vaddr(address) || address == NULL || pml4_get_page(thread_current()->pml4, address))
+	if (is_kernel_vaddr(address) || address == NULL || pml4_get_page(thread_current()->pml4, address) == NULL)
 		exit_(-1);
 }
 
@@ -158,7 +160,7 @@ int open_(const char *file)
 	struct file *open_file = filesys_open(file);
 	
 	if (open_file == NULL)
-	return -1;
+		return -1;
 	
 	int fd = process_add_file(open_file);
 	
@@ -176,13 +178,14 @@ int filesize_(int fd)
 	struct file *file = process_get_file(fd);
 	
 	if (file == NULL || fd < 3)
-	return;
+		return;
 	
 	return file_length(file);
 }
 
 int read_(int fd, void *buffer, unsigned length)
 {
+	check_address(buffer);
 	int read_bytes = 0;
 	
 	if (fd == 0) // 파일 디스크립터가 0이면
@@ -208,7 +211,7 @@ int read_(int fd, void *buffer, unsigned length)
 		struct file *file = process_get_file(fd); 
 		
 		if (file == NULL)
-		return -1;
+			return -1;
 		
 		lock_acquire(&filesys_lock); // race condition 방지를 위해 잠금
 		read_bytes = file_read(file, buffer, length);
@@ -219,6 +222,8 @@ int read_(int fd, void *buffer, unsigned length)
 
 int write_(int fd, const void *buffer, unsigned length)
 {
+	check_address(buffer);
+
 	if (fd <= 0)
 	{
 		return -1;
@@ -234,7 +239,7 @@ int write_(int fd, const void *buffer, unsigned length)
 		int write_bytes = -1;
 		
 		if (file == NULL)
-		return -1;
+			return -1;
 		
 		lock_acquire(&filesys_lock); // race condition 방지 락
 		write_bytes = file_write(file, buffer, length);
@@ -249,7 +254,7 @@ void seek_(int fd, unsigned position)
 	struct file *file = process_get_file(fd);
 	
 	if (file == NULL || fd < 3)
-	return;
+		return;
 	
 	file_seek(file, position);
 }
@@ -259,7 +264,7 @@ unsigned tell_(int fd)
 	struct file *file = process_get_file(fd);
 	
 	if (file == NULL || fd < 3)
-	return;
+		return;
 	
 	return file_tell(file);
 }
@@ -269,8 +274,8 @@ void close_(int fd)
 	struct file *file = process_get_file(fd);
 	
 	if (file == NULL || fd < 3)
-	return;
+		return;
 	
 	process_close_file(fd);	
-		file_close(file);
+	file_close(file);
 }

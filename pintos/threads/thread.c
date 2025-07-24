@@ -220,15 +220,9 @@ tid_t thread_create (const char *name, int priority, thread_func *function, void
 
 	if (t->fd_table == NULL)
 		return TID_ERROR;
-
+		
 	t->fd_index = 3; 
 	t->exit_status = 0;
-	
-	// 테이블 순회하면서 초기화
-	for (int i = 3; i < FDCOUNT_LIMIT; i++)
-	{
-		t->fd_table[i] = NULL;
-	}
 #endif
 
 	/* 스레드가 스케줄되면 kernel_thread를 호출한다. 
@@ -373,9 +367,6 @@ void thread_yield(void)
 		list_insert_ordered(&ready_list, &curr->elem, cmp_priority, NULL);
 		// list_push_back (&ready_list, &curr->elem); // 주어진 항목을 리스트의 마지막에 삽입
 	
-	// do_schedule(THREAD_READY);
-	// curr->status = THREAD_READY;
-	// schedule();
 	do_schedule(THREAD_READY);
 	intr_set_level(old_level);
 }
@@ -514,7 +505,10 @@ static void init_thread (struct thread *t, const char *name, int priority)
 #ifdef USERPROG
 	t->pml4 = NULL; // 명시적으로 NULL로 초기화
 	t->exit_status = 0; // 초기화 기본 종료 상태 0
-	list_init(&t->child_list);
+
+	t->runn_file = NULL; 
+	t->fd_index = 0;
+	t->fd_table = NULL;
 #endif
 }
 

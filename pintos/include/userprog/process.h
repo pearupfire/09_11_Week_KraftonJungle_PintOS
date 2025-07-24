@@ -13,5 +13,6 @@ void argument_stack(char **argv, int argc, struct intr_frame *if_);
 struct file* process_get_file(int fd);
 int process_add_file(struct file *file);
 int process_close_file(int fd);
+struct thread *get_child_tid(tid_t child_tid);
 
 #endif /* userprog/process.h */

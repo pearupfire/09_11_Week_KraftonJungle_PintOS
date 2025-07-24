@@ -60,17 +60,6 @@ process_create_initd (const char *file_name) {
 	if (tid == TID_ERROR)
 		palloc_free_page (fn_copy);
 
-	// // child status 생성 및 추가
-	// struct child_status *cs = palloc_get_page(PAL_ZERO);
-	// cs->child_tid = tid;
-	// cs->has_been_waited = false;
-	// cs->is_exited = false;
-	// sema_init(&cs->wait_sema, 0);
-
-	// struct thread *t_current = thread_current();
-	// list_push_back(&t_current->child_list, &cs->elem);
-	// t_current->child_status = cs;
-
 	return tid;
 }
 
@@ -133,8 +122,8 @@ duplicate_pte (uint64_t *pte, void *va, void *aux) {
  * Hint) parent->tf does not hold the userland context of the process.
  *       That is, you are required to pass second argument of process_fork to
  *       this function. */
-static void
-__do_fork (void *aux) {
+static void __do_fork (void *aux) 
+{
 	struct intr_frame if_;
 	struct thread *parent = (struct thread *) aux;
 	struct thread *current = thread_current ();
@@ -270,52 +259,15 @@ void argument_stack(char **argv, int argc, struct intr_frame *if_)
  *
  * This function will be implemented in problem 2-2.  For now, it
  * does nothing. */
-int
-process_wait (tid_t child_tid UNUSED) {
-	// struct thread *cur = thread_current();
-	// struct list_elem *e;
-	// struct child_status *cs = NULL;
-
-	// for (e = list_begin(&cur->child_list); e != list_end(&cur->child_list); e = list_next(e)) {
-	// 	struct child_status *entry = list_entry(e, struct child_status, elem);
-	// 	if (entry->child_tid == child_tid) {
-	// 		cs = entry;
-	// 		break;
-	// 	}
-	// }
-
-	// if (cs == NULL || cs->has_been_waited) {
-	// 	return -1;
-	// }
-
-	// cs->has_been_waited = true;
-
-	// if (!cs->is_exited) {
-	// 	sema_down(&cs->wait_sema);
-	// }
-
-	// int status = cs->exit_status;
-	// list_remove(&cs->elem);
-	// palloc_free_page(cs);
-	// return status;
-
-	thread_sleep(300);
+int process_wait (tid_t child_tid UNUSED) 
+{
+	thread_sleep(900);
 }
 
 /* Exit the process. This function is called by thread_exit (). */
-void
-process_exit (void) {
-	/* TODO: Your code goes here.
-	 * TODO: Implement process termination message (see
-	 * TODO: project2/process_termination.html).
-	 * TODO: We recommend you to implement process resource cleanup here. */
-	
+void process_exit (void) 
+{
 	struct thread *curr = thread_current ();
-	// struct child_status *cs = curr->child_status;
-
-	// cs->exit_status = curr->exit_status;
-	// cs->is_exited = true;
-	// sema_up(&cs->wait_sema);
 
 	process_cleanup ();
 }
@@ -376,6 +328,7 @@ int process_add_file(struct file *file)
 			return fd_index;
 		}
 	}
+
 	return -1;
 }
 
