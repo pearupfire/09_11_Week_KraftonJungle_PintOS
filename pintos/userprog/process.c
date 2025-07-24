@@ -296,15 +296,18 @@ int process_wait (tid_t child_tid UNUSED)
 	sema_up(&child_thread->wait_sema); // 자식의 exit() 후 자기 메모리를 해제 할 수 있도록 wait_sema를 올릶
 	return exit_status;
 
-	thread_sleep(300);
+	// thread_sleep(900);
 }
 
-struct thread *get_child_tid(tid_t child_tid) {
+struct thread *get_child_tid(tid_t child_tid) 
+{
     struct thread *parent = thread_current();
     struct list_elem *e;
 
-    for (e = list_begin(&parent->child_list); e != list_end(&parent->child_list); e = list_next(e)) {
+    for (e = list_begin(&parent->child_list); e != list_end(&parent->child_list); e = list_next(e)) 
+	{
         struct thread *child = list_entry(e, struct thread, child_elem);
+
         if (child->tid == child_tid)
             return child;
     }

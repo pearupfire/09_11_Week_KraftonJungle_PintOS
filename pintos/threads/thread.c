@@ -508,8 +508,8 @@ static void init_thread (struct thread *t, const char *name, int priority)
 #ifdef USERPROG
 	t->pml4 = NULL; // 명시적으로 NULL로 초기화
 	t->exit_status = 0; // 초기화 기본 종료 상태 0
+
 	t->runn_file = NULL; 
-	
 	t->fd_index = 0;
 	t->fd_table = NULL;
 

@@ -12,6 +12,8 @@
 #include "filesys/file.h"
 #include "include/userprog/process.h"
 #include "threads/init.h"
+#include "include/threads/vaddr.h"
+#include "threads/mmu.h"
 
 void syscall_entry (void);
 void syscall_handler (struct intr_frame *);
@@ -103,7 +105,7 @@ syscall_init (void) {
 void check_address(void *address)
 {	
 	// 커널영역이거나, address가 null이거나, 가상페이지에 할당되었는지
-	if (is_kernel_vaddr(address) || address == NULL || pml4_get_page(thread_current()->pml4, address))
+	if (is_kernel_vaddr(address) || address == NULL || pml4_get_page(thread_current()->pml4, address) == NULL)
 		exit_(-1);
 }
 
@@ -129,7 +131,7 @@ pid_t fork_(const char *thread_name)
 
 int exec_(const char *file)
 {
-	
+
 }
 
 int wait_(pid_t child_tid)
@@ -277,5 +279,5 @@ void close_(int fd)
 		return;
 	
 	process_close_file(fd);	
-		file_close(file);
+	file_close(file);
 }
