@@ -124,9 +124,7 @@ void exit_(int status)
 
 pid_t fork_(const char *thread_name)
 {
-	check_address(thread_name);
 
-	return process_fork(thread_name, NULL);
 }
 
 int exec_(const char *file)

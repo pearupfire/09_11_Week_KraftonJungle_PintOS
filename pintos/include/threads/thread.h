@@ -114,16 +114,6 @@ struct thread {
 
 	int fd_index; 			// 파일 디스크립터 인덱스
 	struct file **fd_table;	// 파일 디스크립터 테이블
- 
-	struct list child_list; // 자식 리스트
-	struct list_elem child_elem; // 부모의 child_list에 들어갈 때 사용
-
-	struct semaphore fork_sema; // fork 완료까지 대기
-	struct semaphore wait_sema; // wait 에서 대기
-	struct semaphore exit_sema; // 종료 시 부모를 꺠움
-
-	struct thread *parent; // 부모 스레드 포인터
-	bool has_waited; // wait()을 여러 번 못하게 
 #endif
 #ifdef VM
 	/* Table for whole virtual memory owned by thread. */
