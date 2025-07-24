@@ -40,7 +40,7 @@ sm-seq-block PASS
 multi-recurse FAIL
 alarm-priority PASS
 close-twice PASS
-args-none PASS
+args-none FAIL
 create-bad-ptr PASS
 read-stdout PASS
 priority-fifo PASS
