@@ -143,7 +143,7 @@ int exec_(const char *cmd_line)
 	
 	memcpy(cmd_copy, cmd_line, size);
 	
-	if (process_exec(cmd_line) == -1)
+	if (process_exec(cmd_copy) == -1)
 		return -1;
 
 	return 0;
@@ -257,7 +257,7 @@ int write_(int fd, const void *buffer, unsigned size)
 		
 		if (file == NULL)
 			return -1;
-		
+
 		lock_acquire(&filesys_lock); // race condition 방지 락
 		write_bytes = file_write(file, buffer, size);
 		lock_release(&filesys_lock); // 락 해제

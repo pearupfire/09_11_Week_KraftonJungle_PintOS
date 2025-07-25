@@ -30,6 +30,7 @@
         "vaddr.h": "c",
         "inttypes.h": "c",
         "string_view": "c",
-        "cstdlib": "c"
+        "cstdlib": "c",
+        "limits": "c"
     }
 }

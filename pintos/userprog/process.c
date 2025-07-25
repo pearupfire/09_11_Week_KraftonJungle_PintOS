@@ -204,7 +204,7 @@ static void __do_fork (void *aux)
 	
 	current->fd_index = parent->fd_index; // fd_index 복사
 
-	for (int fd = 3; fd < parent->fd_index; fd++) // 부모의 file_index 까지 순회하면서
+	for (int fd = 3; fd <= parent->fd_index; fd++) // 부모의 file_index 까지 순회하면서
 	{
 		if (parent->fd_table[fd] == NULL) // NULL인건 건너뛰고
 			continue;
@@ -550,6 +550,9 @@ static bool load (const char *file_name, struct intr_frame *if_)
 		goto done;
 	}
 
+	t->runn_file = file;   // 현재 실행하고 있는 실행 파일을 저장
+	file_deny_write(file); // 실행 파일을 다른 곳에서 write 하는 걸 막기
+
 	/* Read and verify executable header. */
 	if (file_read (file, &ehdr, sizeof ehdr) != sizeof ehdr
 			|| memcmp (ehdr.e_ident, "\177ELF\2\1\1", 7)
@@ -629,7 +632,7 @@ static bool load (const char *file_name, struct intr_frame *if_)
 
 done:
 	/* We arrive here whether the load is successful or not. */
-	file_close (file);
+	// file_close (file); 실행 중에 닫아버리면 write 보호가 유지되지 못함
 	return success;
 }
 
