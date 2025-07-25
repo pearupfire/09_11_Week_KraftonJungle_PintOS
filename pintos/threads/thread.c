@@ -222,10 +222,8 @@ tid_t thread_create (const char *name, int priority, thread_func *function, void
 		return TID_ERROR;
 		
 	t->fd_index = 3; 
-	t->fd_table[0] = 0;
-	t->fd_table[1] = 1;
-	t->fd_table[2] = 2;
 	t->exit_status = 0;
+	list_push_back(&thread_current()->child_list, &t->child_elem);
 #endif
 
 	/* 스레드가 스케줄되면 kernel_thread를 호출한다. 
@@ -514,8 +512,6 @@ static void init_thread (struct thread *t, const char *name, int priority)
 	t->fd_table = NULL;
 
 	list_init(&t->child_list);
-	t->parent = NULL;
-	t->has_waited = false;
 	sema_init(&t->fork_sema, 0);
 	sema_init(&t->exit_sema, 0);
 	sema_init(&t->wait_sema, 0); 

@@ -122,8 +122,7 @@ struct thread {
 	struct semaphore wait_sema; // wait 에서 대기
 	struct semaphore exit_sema; // 종료 시 부모를 꺠움
 
-	struct thread *parent; // 부모 스레드 포인터
-	bool has_waited; // wait()을 여러 번 못하게 
+	struct intr_frame parent_if; 
 #endif
 #ifdef VM
 	/* Table for whole virtual memory owned by thread. */

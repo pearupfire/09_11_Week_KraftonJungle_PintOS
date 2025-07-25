@@ -14,6 +14,8 @@
 #include "threads/init.h"
 #include "include/threads/vaddr.h"
 #include "threads/mmu.h"
+#include "lib/string.h"
+#include "threads/palloc.h"
 
 void syscall_entry (void);
 void syscall_handler (struct intr_frame *);
@@ -129,14 +131,27 @@ pid_t fork_(const char *thread_name)
 	return process_fork(thread_name, NULL);
 }
 
-int exec_(const char *file)
+int exec_(const char *cmd_line)
 {
+	check_address(cmd_line);
 
+	int size = strlen(cmd_line) + 1;
+	char *cmd_copy = palloc_get_page(PAL_ZERO);
+
+	if (cmd_copy == NULL)
+		return -1;
+	
+	memcpy(cmd_copy, cmd_line, size);
+	
+	if (process_exec(cmd_line) == -1)
+		return -1;
+
+	return 0;
 }
 
-int wait_(pid_t child_tid)
+int wait_(pid_t pid)
 {
-	return process_wait(child_tid);
+	return process_wait(pid);
 }
 
 bool create_(const char *file, unsigned initial_size)
@@ -185,7 +200,7 @@ int filesize_(int fd)
 	return file_length(file);
 }
 
-int read_(int fd, void *buffer, unsigned length)
+int read_(int fd, void *buffer, unsigned size)
 {
 	check_address(buffer);
 	int read_bytes = 0;
@@ -195,7 +210,7 @@ int read_(int fd, void *buffer, unsigned length)
 		char c;
 		unsigned char *buf = buffer;
 		
-		for (int i = 0; i < length; i++) // 길이만큼 반복하고
+		for (int i = 0; i < size; i++) // 길이만큼 반복하고
 		{
 			c = input_getc(); // input_getc() = 키보드 하나하나 입력이 가능
 			*buf++ = c; // c를 buf에 저장하고 포인터 늘리기
@@ -216,13 +231,13 @@ int read_(int fd, void *buffer, unsigned length)
 			return -1;
 		
 		lock_acquire(&filesys_lock); // race condition 방지를 위해 잠금
-		read_bytes = file_read(file, buffer, length);
+		read_bytes = file_read(file, buffer, size);
 		lock_release(&filesys_lock); // 해제
 		return read_bytes;
 	}
 }
 
-int write_(int fd, const void *buffer, unsigned length)
+int write_(int fd, const void *buffer, unsigned size)
 {
 	check_address(buffer);
 
@@ -232,8 +247,8 @@ int write_(int fd, const void *buffer, unsigned length)
 	}
 	else if (fd == 1)
 	{
-		putbuf(buffer, length);
-		return length;
+		putbuf(buffer, size);
+		return size;
 	}
 	else
 	{
@@ -244,7 +259,7 @@ int write_(int fd, const void *buffer, unsigned length)
 			return -1;
 		
 		lock_acquire(&filesys_lock); // race condition 방지 락
-		write_bytes = file_write(file, buffer, length);
+		write_bytes = file_write(file, buffer, size);
 		lock_release(&filesys_lock); // 락 해제
 		
 		return write_bytes;

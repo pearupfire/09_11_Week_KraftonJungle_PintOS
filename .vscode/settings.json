@@ -28,6 +28,8 @@
         "gdt.h": "c",
         "intrinsic.h": "c",
         "vaddr.h": "c",
-        "inttypes.h": "c"
+        "inttypes.h": "c",
+        "string_view": "c",
+        "cstdlib": "c"
     }
 }
