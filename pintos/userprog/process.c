@@ -265,7 +265,7 @@ int process_exec(void *f_name)
 		return -1;
 
 	/* Start switched process. */
-	// 성공 시 프로세스 시작
+	// 성공 시 프로세스 스위치
 	do_iret (&_if);
 	NOT_REACHED ();
 }
@@ -422,7 +422,7 @@ int process_add_file(struct file *file)
 		return -1;
 	
 	struct thread *cur_thread = thread_current();
-
+	
 	for (int fd_index = 3; fd_index < FDCOUNT_LIMIT; fd_index++)
 	{
 		if (cur_thread->fd_table[fd_index] == NULL)

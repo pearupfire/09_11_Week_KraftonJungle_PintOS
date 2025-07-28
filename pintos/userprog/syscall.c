@@ -50,59 +50,59 @@ syscall_init (void) {
 }
 
 /* The main system call interface */
-	void syscall_handler (struct intr_frame *f UNUSED) 
+void syscall_handler (struct intr_frame *f UNUSED) 
+{
+	int sys_num = f->R.rax;
+
+	switch (sys_num)
 	{
-		int sys_num = f->R.rax;
-	
-		switch (sys_num)
-		{
-		case SYS_HALT:
-			halt_();
-			break;
-		case SYS_EXIT:
-			exit_(f->R.rdi);
-			break;
-		case SYS_FORK:
-			f->R.rax = fork_(f->R.rdi);
-			break;
-		case SYS_EXEC:
-			f->R.rax = exec_(f->R.rdi);
-			break;
-		case SYS_WAIT:
-			f->R.rax = wait_(f->R.rdi);
-			break;
-		case SYS_CREATE:
-			f->R.rax = create_(f->R.rdi, f->R.rsi);
-			break;
-		case SYS_REMOVE:
-			f->R.rax = remove_(f->R.rdi);
-			break;
-		case SYS_OPEN:
-			f->R.rax = open_(f->R.rdi);
-			break;
-		case SYS_FILESIZE:
-			f->R.rax = filesize_(f->R.rdi);
-			break;
-		case SYS_READ:
-			f->R.rax = read_(f->R.rdi, f->R.rsi, f->R.rdx);
-			break;
-		case SYS_WRITE:
-			f->R.rax = write_(f->R.rdi, f->R.rsi, f->R.rdx);
-			break;
-		case SYS_SEEK:
-			seek_(f->R.rdi, f->R.rsi);
-			break;
-		case SYS_TELL:
-			f->R.rax = tell_(f->R.rdi);
-			break;
-		case SYS_CLOSE:
-			close_(f->R.rdi);
-			break;
-		default:
-			exit_(-1);
-			break;
-		}
+	case SYS_HALT:
+		halt_();
+		break;
+	case SYS_EXIT:
+		exit_(f->R.rdi);
+		break;
+	case SYS_FORK:
+		f->R.rax = fork_(f->R.rdi);
+		break;
+	case SYS_EXEC:
+		f->R.rax = exec_(f->R.rdi);
+		break;
+	case SYS_WAIT:
+		f->R.rax = wait_(f->R.rdi);
+		break;
+	case SYS_CREATE:
+		f->R.rax = create_(f->R.rdi, f->R.rsi);
+		break;
+	case SYS_REMOVE:
+		f->R.rax = remove_(f->R.rdi);
+		break;
+	case SYS_OPEN:
+		f->R.rax = open_(f->R.rdi);
+		break;
+	case SYS_FILESIZE:
+		f->R.rax = filesize_(f->R.rdi);
+		break;
+	case SYS_READ:
+		f->R.rax = read_(f->R.rdi, f->R.rsi, f->R.rdx);
+		break;
+	case SYS_WRITE:
+		f->R.rax = write_(f->R.rdi, f->R.rsi, f->R.rdx);
+		break;
+	case SYS_SEEK:
+		seek_(f->R.rdi, f->R.rsi);
+		break;
+	case SYS_TELL:
+		f->R.rax = tell_(f->R.rdi);
+		break;
+	case SYS_CLOSE:
+		close_(f->R.rdi);
+		break;
+	default:
+		exit_(-1);
+		break;
 	}
+}
 
 void check_address(void *address)
 {	
