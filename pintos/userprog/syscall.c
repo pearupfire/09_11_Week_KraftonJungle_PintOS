@@ -144,7 +144,10 @@ int exec_(const char *cmd_line)
 	memcpy(cmd_copy, cmd_line, size);
 	
 	if (process_exec(cmd_copy) == -1)
+	{	
+		palloc_free_page(cmd_copy);
 		return -1;
+	}
 
 	return 0;
 }
@@ -182,10 +185,7 @@ int open_(const char *file)
 	int fd = process_add_file(open_file);
 	
 	if (fd == -1)
-	{
 		file_close(open_file);
-		return -1;
-	}
 	
 	return fd;
 }

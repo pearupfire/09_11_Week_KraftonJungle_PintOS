@@ -83,7 +83,7 @@ tid_t process_fork (const char *name, struct intr_frame *if_ UNUSED)
 	// 부모 스레드 불러오기
 	struct thread *parent = thread_current();
 	// 현재 스레드의 intr_frame 위치를 계산하고 복사 (현재 스레드의 if_는 페이지 마지막에 븥어있음)
-	struct infr_frame *f = (pg_round_up(rrsp()) - sizeof(struct intr_frame));
+	struct intr_frame *f = (pg_round_up(rrsp()) - sizeof(struct intr_frame));
 	// 자식 프로세스가 부모의 레지스터 상태를 복제할 수 있도록 parent->parent_if에 저장
 	memcpy(&parent->parent_if, f, sizeof(struct intr_frame));
 	// 자식 스레드 생성
@@ -122,7 +122,7 @@ static bool duplicate_pte (uint64_t *pte, void *va, void *aux)
 	bool writable;
 
 	/* 1. TODO: If the parent_page is kernel page, then return immediately. */
-	// 부모 페이지가 커널 가장 수소라면 복사할 필요 없으므로 true 반환
+	// 부모 페이지가 커널 가장 주소라면 복사할 필요 없으므로 true 반환
 	if (is_kernel_vaddr(va))
 		return true;
 
@@ -154,8 +154,11 @@ static bool duplicate_pte (uint64_t *pte, void *va, void *aux)
 	// 복사한 newpage를 자신의 pml4에 va위치에 매핑
 	// 쓰기 가능 여부를 writable 플래그를 함께 전달
 	if (!pml4_set_page (current->pml4, va, newpage, writable)) 
+	{
 		/* 6. TODO: if fail to insert page, do error handling. */
+		palloc_free_page(newpage);
 		return false;
+	}
 		
 	return true;
 }
@@ -204,7 +207,7 @@ static void __do_fork (void *aux)
 	
 	current->fd_index = parent->fd_index; // fd_index 복사
 
-	for (int fd = 3; fd <= parent->fd_index; fd++) // 부모의 file_index 까지 순회하면서
+	for (int fd = 3; fd < parent->fd_index; fd++) // 부모의 file_index 까지 순회하면서
 	{
 		if (parent->fd_table[fd] == NULL) // NULL인건 건너뛰고
 			continue;
@@ -218,7 +221,8 @@ static void __do_fork (void *aux)
 	if (succ)
 		do_iret (&if_);
 error:
-	sema_up(&current->fork_sema); // 복제 실패시 현재 fork_sema 블락 해제
+	current->exit_status = -1;
+	sema_up(&current->fork_sema); // 복제 실패 시 현재 fork_sema 블락 해제
 	thread_exit ();
 }
 
@@ -246,7 +250,6 @@ int process_exec(void *f_name)
 	char *arg_list[32]; 	// 파싱한 문자를 저장할 배열
 	int arg_cnt = 0;		// 인자 개수
 
-
 	// strtok_r를 이름을 공백으로 분할
 	for (token = strtok_r(file_name," ", &save_ptr); token != NULL; token = strtok_r(NULL, " ", &save_ptr))
 		arg_list[arg_cnt++] = token;	// 분리한 토큰을 arg_list에 저장
@@ -254,15 +257,15 @@ int process_exec(void *f_name)
 	/* And then load the binary */
 	// ELF 실행 파일 로드
 	success = load (arg_list[0], &_if);
-	// file_name 프리
-	argument_stack(arg_list, arg_cnt, &_if);
-	// hex_dump (_if.rsp, _if.rsp, USER_STACK - _if.rsp, true);
-	palloc_free_page (file_name);
-	
+
 	/* If load failed, quit. */
 	// 로드 실패 시 종료
 	if (!success)
 		return -1;
+
+	argument_stack(arg_list, arg_cnt, &_if);
+	// hex_dump (_if.rsp, _if.rsp, USER_STACK - _if.rsp, true);
+	palloc_free_page (file_name);
 
 	/* Start switched process. */
 	// 성공 시 프로세스 스위치
@@ -363,7 +366,7 @@ void process_exit (void)
 			curr->fd_table[fd] = NULL;
 		}
 	}
-	
+
 	// 러닝 중인 파일 닫기
 	if (curr->runn_file)
 		file_close(curr->runn_file);
@@ -423,16 +426,12 @@ int process_add_file(struct file *file)
 	
 	struct thread *cur_thread = thread_current();
 	
-	for (int fd_index = 3; fd_index < FDCOUNT_LIMIT; fd_index++)
-	{
-		if (cur_thread->fd_table[fd_index] == NULL)
-		{
-			cur_thread->fd_table[fd_index] = file;
-			return fd_index;
-		}
-	}
+	if (cur_thread->fd_index >= FDCOUNT_LIMIT)
+		return -1;
+	
+	cur_thread->fd_table[cur_thread->fd_index++] = file;
 
-	return -1;
+	return cur_thread->fd_index - 1;
 }
 
 /// @brief 현재 스레드의 fd번째 파일 정보 얻는 함수

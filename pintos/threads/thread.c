@@ -219,6 +219,12 @@ tid_t thread_create (const char *name, int priority, thread_func *function, void
 	t->fd_table = palloc_get_multiple(PAL_ZERO, FDPAGES);
 
 	if (t->fd_table == NULL)
+	{
+		palloc_free_page(t);
+		return TID_ERROR;
+	}
+
+	if (t->fd_table == NULL)
 		return TID_ERROR;
 		
 	t->fd_index = 3; 
@@ -508,7 +514,7 @@ static void init_thread (struct thread *t, const char *name, int priority)
 	t->exit_status = 0; // 초기화 기본 종료 상태 0
 
 	t->runn_file = NULL; 
-	t->fd_index = 0;
+	t->fd_index = 3;
 	t->fd_table = NULL;
 
 	list_init(&t->child_list);
