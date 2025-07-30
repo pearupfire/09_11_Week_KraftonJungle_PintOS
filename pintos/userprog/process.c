@@ -78,6 +78,11 @@ initd (void *f_name) {
 
 /* Clones the current process as `name`. Returns the new process's thread id, or
  * TID_ERROR if the thread cannot be created. */
+
+/// @brief 현재 스레드의 레지스터 상태와 자원을 복제, 자식 프로레스 생성 및 초기화 대기하는 함수
+/// @param name 생성할 자식 스레드의 이름
+/// @param UNUSED 
+/// @return 자식 스레드의 TID 또는 실패 시 TID_ERROR
 tid_t process_fork (const char *name, struct intr_frame *if_ UNUSED) 
 {
 	// 부모 스레드 불러오기
@@ -113,6 +118,12 @@ tid_t process_fork (const char *name, struct intr_frame *if_ UNUSED)
 #ifndef VM
 /* Duplicate the parent's address space by passing this function to the
  * pml4_for_each. This is only for the project 2. */
+
+/// @brief 부모 프로세스의 페이지 테이블 엔트리 복사하여 자식 프로세스 페이지 테이블 추가하는 함수
+/// @param pte 부모 페이지의 테이블 엔트리 포인터
+/// @param va 복사할 가상 주소
+/// @param aux 부모 프로세스를 가리키는 포인터
+/// @return 성공 시 true, 실패 시 false
 static bool duplicate_pte (uint64_t *pte, void *va, void *aux) 
 {
 	struct thread *current = thread_current ();
@@ -168,6 +179,9 @@ static bool duplicate_pte (uint64_t *pte, void *va, void *aux)
  * Hint) parent->tf does not hold the userland context of the process.
  *       That is, you are required to pass second argument of process_fork to
  *       this function. */
+
+/// @brief 부모 프로세스 실행 컨텍스으와 자원을 복사하고 자식 프로세스 초기화, 실행하는 함수
+/// @param aux 부모 프로세스를 가리키는 포인터
 static void __do_fork (void *aux) 
 {
 	struct intr_frame if_;
@@ -228,6 +242,10 @@ error:
 
 /* Switch the current execution context to the f_name.
  * Returns -1 on fail. */
+
+/// @brief 현재 프로세스에서 사용자 프로그램을 실행하는 함수
+/// @param f_name 실행할 프로그램 이름, 인자 문자열
+/// @return 성공 시 반환x, 실패 시 -1 반환 
 int process_exec(void *f_name) 
 {
 	char *file_name = f_name;
@@ -273,6 +291,10 @@ int process_exec(void *f_name)
 	NOT_REACHED ();
 }
 
+/// @brief 사용자 프로그램의 인자를 스택에 올리는 함수
+/// @param argv 프로그램 실행 시 전달할 문자열 인자 배열
+/// @param argc 인자 개수
+/// @param if_ 사용자 스택과 레지스터 정보를 담고있는 프레임 포인터
 void argument_stack(char **argv, int argc, struct intr_frame *if_)
 {
 	char *arg_addr[32]; // 인자 문자열이 위치한 주소를 저장할 배열
@@ -320,6 +342,10 @@ void argument_stack(char **argv, int argc, struct intr_frame *if_)
  *
  * This function will be implemented in problem 2-2.  For now, it
  * does nothing. */
+
+/// @brief 자식 프로세스가 종료될 때까지 기다리는 함수
+/// @param child_tid 기다릴 자식 스레드의 TID
+/// @return 종료 상태 반환, 실패 시 -1
 int process_wait (tid_t child_tid UNUSED) 
 {
 	struct thread *child_thread = get_child_tid(child_tid);
@@ -335,6 +361,9 @@ int process_wait (tid_t child_tid UNUSED)
 	return exit_status;
 }
 
+/// @brief 현재 프로세스의 자식 프로세스를 찾는 함수
+/// @param child_tid 찾고자 하는 자식 프로세스의 TID
+/// @return 성공 시 자식 프로세스 포인터 반환, 실패 시 NULL 
 struct thread *get_child_tid(tid_t child_tid) 
 {
     struct thread *parent = thread_current();
@@ -351,6 +380,8 @@ struct thread *get_child_tid(tid_t child_tid)
 }
 
 /* Exit the process. This function is called by thread_exit (). */
+
+/// @brief 현재 실행 중인 프로세스 종료하고 자원 정리하는 함수
 void process_exit (void) 
 {
 	struct thread *curr = thread_current ();
