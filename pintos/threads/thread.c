@@ -219,10 +219,17 @@ tid_t thread_create (const char *name, int priority, thread_func *function, void
 	t->fd_table = palloc_get_multiple(PAL_ZERO, FDPAGES);
 
 	if (t->fd_table == NULL)
+	{
+		palloc_free_page(t);
 		return TID_ERROR;
+	}
 
+	if (t->fd_table == NULL)
+		return TID_ERROR;
+		
 	t->fd_index = 3; 
 	t->exit_status = 0;
+	list_push_back(&thread_current()->child_list, &t->child_elem);
 #endif
 
 	/* 스레드가 스케줄되면 kernel_thread를 호출한다. 
@@ -368,8 +375,6 @@ void thread_yield(void)
 		// list_push_back (&ready_list, &curr->elem); // 주어진 항목을 리스트의 마지막에 삽입
 	
 	do_schedule(THREAD_READY);
-	// curr->status = THREAD_READY;
-	// schedule();
 	intr_set_level(old_level);
 }
 
@@ -507,7 +512,15 @@ static void init_thread (struct thread *t, const char *name, int priority)
 #ifdef USERPROG
 	t->pml4 = NULL; // 명시적으로 NULL로 초기화
 	t->exit_status = 0; // 초기화 기본 종료 상태 0
+
+	t->runn_file = NULL; 
+	t->fd_index = 3;
+	t->fd_table = NULL;
+
 	list_init(&t->child_list);
+	sema_init(&t->fork_sema, 0);
+	sema_init(&t->exit_sema, 0);
+	sema_init(&t->wait_sema, 0); 
 #endif
 }
 
