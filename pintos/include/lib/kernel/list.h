@@ -100,6 +100,12 @@ struct list {
    name of the outer structure STRUCT and the member name MEMBER
    of the list element.  See the big comment at the top of the
    file for an example. */
+
+// 리스트 요소 LIST_ELEM에 대한 포인터를,
+// 그 리스트 요소가 포함되어 있는 외부 구조체의 포인터로 변환합니다.
+// 변환을 위해서는
+// 외부 구조체의 이름 (STRUCT)과
+// 그 구조체 안에 정의된 리스트 요소의 멤버 이름 (MEMBER)을 제공해야 합니다.
 #define list_entry(LIST_ELEM, STRUCT, MEMBER)           \
 	((STRUCT *) ((uint8_t *) &(LIST_ELEM)->next     \
 		- offsetof (STRUCT, MEMBER.next)))
@@ -144,6 +150,10 @@ void list_reverse (struct list *);
 /* Compares the value of two list elements A and B, given
    auxiliary data AUX.  Returns true if A is less than B, or
    false if A is greater than or equal to B. */
+   
+// 보조 데이터 AUX를 이용하여, 리스트 요소 A와 B의 값을 비교합니다.
+// A가 B보다 작으면 true를 반환하고,
+// A가 B보다 크거나 같으면 false를 반환합니다.
 typedef bool list_less_func (const struct list_elem *a,
                              const struct list_elem *b,
                              void *aux);

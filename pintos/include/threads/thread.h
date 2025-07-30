@@ -1,14 +1,14 @@
 #ifndef THREADS_THREAD_H
 #define THREADS_THREAD_H
-
+#define USERPROG
 #include <debug.h>
 #include <list.h>
 #include <stdint.h>
+#include "threads/synch.h"
 #include "threads/interrupt.h"
 #ifdef VM
 #include "vm/vm.h"
 #endif
-
 
 /* States in a thread's life cycle. */
 enum thread_status {
@@ -27,6 +27,8 @@ typedef int tid_t;
 #define PRI_MIN 0                       /* Lowest priority. */
 #define PRI_DEFAULT 31                  /* Default priority. */
 #define PRI_MAX 63                      /* Highest priority. */
+#define FDPAGES 3
+#define FDCOUNT_LIMIT FDPAGES * (1 << 9) // 페이지 크기 4kb / 파일 포인터 8바이트 = 512
 
 /* A kernel thread or user process.
  *
@@ -87,17 +89,40 @@ typedef int tid_t;
  * blocked state is on a semaphore wait list. */
 struct thread {
 	/* Owned by thread.c. */
+	
 	tid_t tid;                          /* Thread identifier. */
 	enum thread_status status;          /* Thread state. */
 	char name[16];                      /* Name (for debugging purposes). */
 	int priority;                       /* Priority. */
 
+	int original_priority; 		  // 기부 받기 전 우선 순위
+	struct lock *waiting_lock;    // 대기 중인 락
+	struct list donations;        // 기부 받은 리스트들
+	struct list_elem donation_elem; // 기부자로 들어갈때 쓰는 연결점
+
 	/* Shared between thread.c and synch.c. */
 	struct list_elem elem;              /* List element. */
+	int64_t wakeup_tick; 				// tick이 되면 깨어나야 함
+
+	/* userprog thread field*/
+	struct file *runn_file;
 
 #ifdef USERPROG
 	/* Owned by userprog/process.c. */
 	uint64_t *pml4;                     /* Page map level 4 */
+	int exit_status;
+
+	int fd_index; 			// 파일 디스크립터 인덱스
+	struct file **fd_table;	// 파일 디스크립터 테이블
+ 
+	struct list child_list; // 자식 리스트
+	struct list_elem child_elem; // 부모의 child_list에 들어갈 때 사용
+
+	struct semaphore fork_sema; // fork 완료까지 대기
+	struct semaphore wait_sema; // wait 에서 대기
+	struct semaphore exit_sema; // 종료 시 부모를 꺠움
+
+	struct intr_frame parent_if; 
 #endif
 #ifdef VM
 	/* Table for whole virtual memory owned by thread. */
@@ -113,6 +138,8 @@ struct thread {
    If true, use multi-level feedback queue scheduler.
    Controlled by kernel command-line option "-o mlfqs". */
 extern bool thread_mlfqs;
+
+bool cmp_priority(const struct list_elem *a, const struct list_elem *b, void *aux UNUSED);
 
 void thread_init (void);
 void thread_start (void);
@@ -140,7 +167,7 @@ int thread_get_nice (void);
 void thread_set_nice (int);
 int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
-
+bool cmp_priority(const struct list_elem *a, const struct list_elem *b, void *aux);
 void do_iret (struct intr_frame *tf);
 
 #endif /* threads/thread.h */

@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include <debug.h>
 #include <stddef.h>
+#include "threads/synch.h"
 
 /* Process identifier. */
 typedef int pid_t;
@@ -20,21 +21,23 @@ typedef int off_t;
 #define EXIT_SUCCESS 0          /* Successful execution. */
 #define EXIT_FAILURE 1          /* Unsuccessful execution. */
 
+
 /* Projects 2 and later. */
-void halt (void) NO_RETURN;
-void exit (int status) NO_RETURN;
-pid_t fork (const char *thread_name);
-int exec (const char *file);
-int wait (pid_t);
-bool create (const char *file, unsigned initial_size);
-bool remove (const char *file);
-int open (const char *file);
-int filesize (int fd);
-int read (int fd, void *buffer, unsigned length);
-int write (int fd, const void *buffer, unsigned length);
-void seek (int fd, unsigned position);
-unsigned tell (int fd);
-void close (int fd);
+void halt_(void);
+void exit_(int status);
+pid_t fork_(const char *thread_name);
+int exec_(const char *cmd_line);
+int wait_(pid_t pid);
+bool create_(const char *file, unsigned initial_size);
+bool remove_(const char *file);
+int open_(const char *file);
+int filesize_(int fd);
+int read_(int fd, void *buffer, unsigned size);
+int write_(int fd, const void *buffer, unsigned size);
+void seek_(int fd, unsigned position);
+unsigned tell_(int fd);
+void close_(int fd);
+void check_address(void *address);
 
 int dup2(int oldfd, int newfd);
 
