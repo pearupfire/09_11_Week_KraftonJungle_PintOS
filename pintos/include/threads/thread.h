@@ -1,6 +1,5 @@
 #ifndef THREADS_THREAD_H
 #define THREADS_THREAD_H
-#define USERPROG
 #include <debug.h>
 #include <list.h>
 #include <stdint.h>
@@ -112,8 +111,9 @@ struct thread {
 	uint64_t *pml4;                     /* Page map level 4 */
 	int exit_status;
 
-	int fd_index; 			// 파일 디스크립터 인덱스
-	struct file **fd_table;	// 파일 디스크립터 테이블
+	int fd_index; 							// 파일 디스크립터 인덱스
+	// struct file *fd_table[FDCOUNT_LIMIT];	// 파일 디스크립터 테이블 -> 정적 할당
+	struct file **fd_table; // -> 동적 할당하기 위해 변경
  
 	struct list child_list; // 자식 리스트
 	struct list_elem child_elem; // 부모의 child_list에 들어갈 때 사용

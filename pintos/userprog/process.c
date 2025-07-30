@@ -341,7 +341,7 @@ struct thread *get_child_tid(tid_t child_tid)
     struct list_elem *e;
 
     for (e = list_begin(&parent->child_list); e != list_end(&parent->child_list); e = list_next(e)) 
-	{
+	  {
         struct thread *child = list_entry(e, struct thread, child_elem);
 
         if (child->tid == child_tid)
